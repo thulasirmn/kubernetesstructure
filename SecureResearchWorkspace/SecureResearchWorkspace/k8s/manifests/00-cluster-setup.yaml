@@ -1,0 +1,59 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# One-time AKS cluster prerequisites for the Secure Research Workspace platform.
+# Apply BEFORE the .NET API starts provisioning workspaces.
+#
+# Requires: AKS 1.21+, Azure CLI logged in, kubectl context set.
+# ──────────────────────────────────────────────────────────────────────────────
+
+# 1) Enable the Azure File CSI driver on the cluster (built-in for AKS):
+#    az aks update -n <cluster> -g <rg> --enable-file-driver
+#    (no manifest required — managed by AKS)
+
+# 2) Install ingress-nginx so we can route per-session paths.
+#    helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx \
+#      --namespace ingress-nginx --create-namespace \
+#      --set controller.service.annotations."service\.beta\.kubernetes\.io/azure-load-balancer-internal"=true
+
+# 3) The api needs RBAC to manage namespaces / deployments / services / ingresses.
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: srw-api
+  namespace: srw-platform
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: srw-api-orchestrator
+rules:
+  - apiGroups: [""]
+    resources: ["namespaces", "secrets", "services", "persistentvolumes", "persistentvolumeclaims", "pods", "pods/log"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: ["apps"]
+    resources: ["deployments", "replicasets"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["ingresses", "networkpolicies"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: srw-api-orchestrator
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: srw-api-orchestrator
+subjects:
+  - kind: ServiceAccount
+    name: srw-api
+    namespace: srw-platform
+---
+# Label the ingress-nginx namespace so workspace NetworkPolicies can allow it
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ingress-nginx
+  labels:
+    name: ingress-nginx

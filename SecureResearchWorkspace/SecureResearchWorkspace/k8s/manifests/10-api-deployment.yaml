@@ -1,0 +1,144 @@
+# Deploys the SRW.Api onto AKS.
+# Prerequisites:
+#   - 00-cluster-setup.yaml applied
+#   - K8s secret "srw-api-secrets" created (see AZURE_SETUP.md Step 11)
+#   - Replace srwregistrydev and 00ecf056-c5e4-4a97-abd4-4cf02161ced0 before applying
+#
+# kubectl apply -f k8s/manifests/10-api-deployment.yaml
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: srw-platform
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: srw-api
+  namespace: srw-platform
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: srw-api
+  template:
+    metadata:
+      labels:
+        app: srw-api
+        azure.workload.identity/use: "true"
+    spec:
+      serviceAccountName: srw-api
+      containers:
+        - name: api
+          image: srwregistrydev.azurecr.io/srw-api:1.0.0
+          ports:
+            - containerPort: 8080
+          env:
+            - name: ASPNETCORE_URLS
+              value: http://+:8080
+            - name: ASPNETCORE_ENVIRONMENT
+              value: Production
+
+            # Cosmos DB
+            - name: Cosmos__Endpoint
+              valueFrom:
+                secretKeyRef:
+                  name: srw-api-secrets
+                  key: cosmos-endpoint
+            - name: Cosmos__AccountKey
+              value: ""    # empty = use Workload Identity (DefaultAzureCredential)
+
+            # Service Bus
+            - name: ServiceBus__FullyQualifiedNamespace
+              valueFrom:
+                secretKeyRef:
+                  name: srw-api-secrets
+                  key: servicebus-namespace
+
+            # Azure
+            - name: Azure__AksClusterName
+              value: srw-aks-dev
+            - name: Azure__AksResourceGroup
+              value: srw-dev-rg
+            - name: Azure__Region
+              value: eastus
+            - name: Azure__IngressDomain
+              value: 20.237.106.233    # replace with your actual domain
+
+          resources:
+            requests:
+              cpu: "200m"
+              memory: "256Mi"
+            limits:
+              cpu: "1"
+              memory: "1Gi"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 20
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: srw-api
+  namespace: srw-platform
+  annotations:
+    azure.workload.identity/client-id: "00ecf056-c5e4-4a97-abd4-4cf02161ced0"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: srw-api
+  namespace: srw-platform
+spec:
+  selector:
+    app: srw-api
+  ports:
+    - port: 80
+      targetPort: 8080
+  type: ClusterIP
+---
+# Expose the API through ingress-nginx
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: srw-api
+  namespace: srw-platform
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: 20.237.106.233    # replace with your actual domain
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: srw-api
+                port:
+                  number: 80
+          - path: /swagger
+            pathType: Prefix
+            backend:
+              service:
+                name: srw-api
+                port:
+                  number: 80
+          - path: /health
+            pathType: Prefix
+            backend:
+              service:
+                name: srw-api
+                port:
+                  number: 80

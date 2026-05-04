@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xargs grep *)",
+      "Bash(dotnet script *)",
+      "Bash(powershell -Command ' $dll = '\\\\''/c/Users/Thulasiraman.subrama/.nuget/packages/kubernetesclient/14.0.2/lib/net8.0/KubernetesClient.dll'\\\\'' Add-Type -Path $dll $type = [k8s.Models.V1NetworkPolicyIngressRule] $type.GetProperties\\(\\) | Select-Object Name, PropertyType ')",
+      "Bash(dotnet build *)",
+      "Bash(dotnet run *)",
+      "Bash(curl *)",
+      "Bash(az storage *)",
+      "Bash(kubectl get *)",
+      "Bash(kubectl logs *)",
+      "Bash(kubectl describe *)",
+      "Bash(kubectl run *)",
+      "Bash(kubectl annotate *)",
+      "Bash(kubectl port-forward *)",
+      "Bash(tasklist //FI \"IMAGENAME eq dotnet.exe\")",
+      "Bash(netstat -ano)",
+      "Bash(grep -v \"^$\")",
+      "Bash(kubectl exec *)",
+      "Bash(kubectl delete deployment,svc,ingress,configmap *)"
+    ]
+  }
+}

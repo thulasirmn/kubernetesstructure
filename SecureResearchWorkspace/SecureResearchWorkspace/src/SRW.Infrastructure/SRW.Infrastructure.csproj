@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- Azure SDK -->
+    <PackageReference Include="Azure.Identity" Version="1.13.1" />
+    <PackageReference Include="Azure.ResourceManager" Version="1.13.0" />
+    <PackageReference Include="Azure.ResourceManager.Storage" Version="1.3.0" />
+    <PackageReference Include="Azure.Storage.Files.Shares" Version="12.20.0" />
+
+    <!-- Kubernetes -->
+    <PackageReference Include="KubernetesClient" Version="14.0.2" />
+
+    <!-- Cosmos DB -->
+    <PackageReference Include="Microsoft.Azure.Cosmos" Version="3.41.0" />
+
+    <!-- Service Bus (async background jobs) -->
+    <PackageReference Include="Azure.Messaging.ServiceBus" Version="7.18.2" />
+
+    <!-- Data Protection (secrets encryption) -->
+    <PackageReference Include="Microsoft.AspNetCore.DataProtection" Version="8.0.10" />
+    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="8.0.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\SRW.Core\SRW.Core.csproj" />
+    <ProjectReference Include="..\SRW.Domain\SRW.Domain.csproj" />
+  </ItemGroup>
+</Project>
