@@ -1,0 +1,23 @@
+# Build output
+**/bin/
+**/obj/
+
+# IDE / tooling
+.vs/
+.idea/
+*.user
+*.suo
+
+# Local Claude Code state
+.claude/settings.local.json
+
+# Local secrets / generated values
+**/.azure-values.txt
+**/.azure-values.local.txt
+
+# Backup archives accidentally committed
+*.zip
+
+# OS
+.DS_Store
+Thumbs.db
