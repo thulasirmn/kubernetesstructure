@@ -1,0 +1,56 @@
+# ─── .NET build output ───────────────────────────────────────────────────────
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+# Visual Studio / Rider / VS Code
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# NuGet
+*.nupkg
+*.snupkg
+**/packages/*
+!**/packages/build/
+
+# Roslyn cache directories
+*.ide/
+
+# Test results
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+*.coverage
+*.coveragexml
+TestResult.xml
+
+# ─── Secrets and local environment ───────────────────────────────────────────
+# Per-developer appsettings overrides (script-generated, contain Azure keys)
+**/appsettings.Development.json
+**/appsettings.Local.json
+**/appsettings.*.local.json
+
+# Script output file containing real Azure values
+scripts/.azure-values.txt
+**/.azure-values.txt
+
+# User-specific configuration
+*.local.json
+local.settings.json
+
+# Claude Code working directory
+.claude/
+
+# ─── OS files ────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ─── Other ───────────────────────────────────────────────────────────────────
+*.swp
+*~

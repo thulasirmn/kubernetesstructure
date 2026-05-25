@@ -1,0 +1,42 @@
+{
+  "_comment": "Copy this file to appsettings.Development.json and fill in real values, or run scripts/setup-azure.sh to auto-populate it. The actual appsettings.Development.json is gitignored to keep secrets out of source control.",
+
+  "Logging": {
+    "LogLevel": {
+      "Default": "Debug",
+      "Microsoft.AspNetCore": "Information",
+      "SRW": "Debug"
+    }
+  },
+
+  "Cosmos": {
+    "Endpoint": "https://<your-cosmos-account>.documents.azure.com:443/",
+    "AccountKey": "<paste from: az cosmosdb keys list --name <acct> --resource-group <rg> --query primaryMasterKey -o tsv>"
+  },
+
+  "Azure": {
+    "SubscriptionId": "<your-subscription-guid>",
+    "Region": "eastus",
+    "AksClusterName": "srw-aks-dev",
+    "AksResourceGroup": "srw-dev-rg",
+    "IngressDomain": "<your-ingress-public-ip-or-domain>",
+    "AllowedSubnetIds": []
+  },
+
+  "ServiceBus": {
+    "FullyQualifiedNamespace": "<your-servicebus>.servicebus.windows.net",
+    "ConnectionString": "<optional — paste only for local dev; leave empty on AKS to use Workload Identity>",
+    "WorkspaceProvisionQueue": "srw-workspace-provision",
+    "SessionStopQueue": "srw-session-stop",
+    "WorkspaceCleanupQueue": "srw-workspace-cleanup"
+  },
+
+  "BackgroundJobs": {
+    "SessionStatusPollSeconds": 15,
+    "IdleReaperIntervalMinutes": 10,
+    "IdleSessionThresholdHours": 8,
+    "OrphanCleanerIntervalHours": 24,
+    "ProvisioningMaxConcurrentCalls": 2,
+    "ProvisioningMaxAutoLockRenewMinutes": 10
+  }
+}
