@@ -15,6 +15,11 @@ provider "kubernetes" {
 }
 
 resource "kubernetes_deployment" "session" {
+  # Do not wait for pod readiness here — SessionStatusPoller handles Starting→Running.
+  # Waiting here causes terraform apply to fail if the pod is slow to schedule (e.g.
+  # due to node pressure), leaving session stuck as Failed with K8s resources orphaned.
+  wait_for_rollout = false
+
   metadata {
     name      = local.deployment_name
     namespace = var.k8s_namespace
@@ -88,9 +93,10 @@ resource "kubernetes_deployment" "session" {
             read_only = false
 
             volume_attributes = {
-              secretName   = "azure-storage-creds"
-              shareName    = var.file_share_name
-              mountOptions = "dir_mode=0777,file_mode=0777,uid=1000,gid=1000,mfsymlinks,cache=strict,nosharesock"
+              secretName      = "azure-storage-creds"
+              secretNamespace = var.k8s_namespace
+              shareName       = var.file_share_name
+              mountOptions    = "dir_mode=0777,file_mode=0777,uid=1000,gid=1000,mfsymlinks,cache=strict"
             }
           }
         }

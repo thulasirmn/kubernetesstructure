@@ -38,7 +38,7 @@ public static class ApplicationEndpoints
                 ContainerImage = dto.ContainerImage,
                 ContainerPort = dto.ContainerPort,
                 MountPath = dto.MountPath ?? "/workspace",
-                CpuRequest = dto.CpuRequest ?? "500m",
+                CpuRequest = dto.CpuRequest ?? "100m",
                 CpuLimit = dto.CpuLimit ?? "2",
                 MemoryRequest = dto.MemoryRequest ?? "1Gi",
                 MemoryLimit = dto.MemoryLimit ?? "4Gi",

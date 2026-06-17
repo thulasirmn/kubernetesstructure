@@ -19,7 +19,7 @@ public class WorkspaceApplication
     public int ContainerPort { get; set; }
 
     /// <summary>Resource limits per user pod.</summary>
-    public string CpuRequest { get; set; } = "500m";
+    public string CpuRequest { get; set; } = "100m";
     public string CpuLimit { get; set; } = "2";
     public string MemoryRequest { get; set; } = "1Gi";
     public string MemoryLimit { get; set; } = "4Gi";

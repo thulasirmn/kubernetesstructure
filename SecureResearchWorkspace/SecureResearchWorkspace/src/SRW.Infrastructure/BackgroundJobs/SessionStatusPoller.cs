@@ -58,6 +58,10 @@ public sealed class SessionStatusPoller : BackgroundService
         {
             try
             {
+                // DeploymentName is null while SessionLaunchWorker is still running terraform apply.
+                // Skip until the worker writes it back to the DB to avoid a spurious 404 → Stopped.
+                if (string.IsNullOrEmpty(session.DeploymentName)) continue;
+
                 var ws = await workspaceRepo.GetByIdAsync(session.WorkspaceId, ct);
                 if (ws is null) continue;
 

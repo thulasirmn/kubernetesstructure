@@ -40,8 +40,11 @@ public class UserSession
             ApplicationId = applicationId,
             UserId = userId,
             Status = SessionStatus.Pending,
-            DeploymentName = $"sess-{slug}",
-            ServiceName = $"svc-{slug}",
+            // DeploymentName and ServiceName are left empty here.
+            // Terraform is the source of truth for these names.
+            // SessionLaunchWorker writes them back after terraform apply completes.
+            DeploymentName = string.Empty,
+            ServiceName = string.Empty,
             IngressPath = $"/s/{slug}",
             CreatedAtUtc = DateTime.UtcNow,
             LastActivityUtc = DateTime.UtcNow
