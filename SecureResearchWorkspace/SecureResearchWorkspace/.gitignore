@@ -18,6 +18,9 @@
 # Backup archives accidentally committed
 *.zip
 
+# Terraform downloaded providers (binaries can exceed 100 MB, not for VCS)
+**/.terraform/
+
 # OS
 .DS_Store
 Thumbs.db

@@ -25,6 +25,8 @@ kubectl apply -f k8s/manifests/10-api-deployment.yaml
 
 No test project exists yet. No migrations needed — Cosmos DB containers are created automatically at startup via `CosmosContainerProvider.InitializeAsync()`.
 
+**Running on a new/local machine:** see [`NEW_MACHINE_SETUP.md`](NEW_MACHINE_SETUP.md) — tooling, `appsettings.Development.json` config keys, Azure RBAC, the Data Protection key-ring gotcha, and the ingress port-forward for opening sessions locally.
+
 ## Architecture
 
 Clean Architecture with strict dependency direction: **Api → Infrastructure → Core → Domain**

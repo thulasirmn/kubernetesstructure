@@ -24,7 +24,9 @@ public static class SessionEndpoints
             try
             {
                 var session = await launcher.LaunchAsync(workspaceId, dto.ApplicationId, user.UserId, ct);
-                return Results.Ok(SessionResponse.From(session));
+                return Results.Accepted(
+                    $"/api/workspaces/{workspaceId}/sessions/{session.Id}",
+                    SessionResponse.From(session));
             }
             catch (InvalidOperationException ex)
             {

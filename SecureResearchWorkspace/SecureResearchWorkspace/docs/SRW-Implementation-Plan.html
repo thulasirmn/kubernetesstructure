@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html xmlns:o="urn:schemas-microsoft-com:office:office"
+      xmlns:w="urn:schemas-microsoft-com:office:word"
+      xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="ProgId" content="Word.Document"/>
+  <meta name="Generator" content="Microsoft Word"/>
+  <!--[if gte mso 9]>
+  <xml>
+    <w:WordDocument>
+      <w:View>Print</w:View>
+      <w:Zoom>100</w:Zoom>
+    </w:WordDocument>
+  </xml>
+  <![endif]-->
+  <style>
+    /* ── Page layout ── */
+    body {
+      font-family: Calibri, Arial, sans-serif;
+      font-size: 11pt;
+      color: #1a1a1a;
+      margin: 0;
+      padding: 0;
+      line-height: 1.5;
+    }
+    @page {
+      mso-page-orientation: portrait;
+      margin: 2.5cm 2.5cm 2cm 2.5cm;
+    }
+
+    /* ── Cover page ── */
+    .cover {
+      page-break-after: always;
+      text-align: center;
+      padding-top: 80pt;
+    }
+    .cover-badge {
+      display: inline-block;
+      background: #0078D4;
+      color: #fff;
+      font-size: 10pt;
+      font-weight: 600;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      padding: 5pt 16pt;
+      border-radius: 3pt;
+      margin-bottom: 24pt;
+    }
+    .cover-title {
+      font-size: 28pt;
+      font-weight: 700;
+      color: #0078D4;
+      line-height: 1.2;
+      margin-bottom: 8pt;
+    }
+    .cover-subtitle {
+      font-size: 16pt;
+      font-weight: 400;
+      color: #444;
+      margin-bottom: 40pt;
+    }
+    .cover-rule {
+      border: none;
+      border-top: 3px solid #0078D4;
+      width: 120pt;
+      margin: 0 auto 40pt auto;
+    }
+    .cover-meta {
+      font-size: 11pt;
+      color: #555;
+      line-height: 2;
+    }
+    .cover-meta strong {
+      color: #1a1a1a;
+    }
+    .cover-footer {
+      margin-top: 80pt;
+      font-size: 9pt;
+      color: #888;
+    }
+
+    /* ── TOC ── */
+    .toc-page {
+      page-break-after: always;
+    }
+
+    /* ── Headings ── */
+    h1 {
+      font-size: 18pt;
+      font-weight: 700;
+      color: #0078D4;
+      border-bottom: 2pt solid #0078D4;
+      padding-bottom: 4pt;
+      margin-top: 24pt;
+      margin-bottom: 12pt;
+      page-break-after: avoid;
+    }
+    h2 {
+      font-size: 13pt;
+      font-weight: 700;
+      color: #005A9E;
+      margin-top: 18pt;
+      margin-bottom: 8pt;
+      page-break-after: avoid;
+    }
+    h3 {
+      font-size: 11pt;
+      font-weight: 700;
+      color: #1a1a1a;
+      margin-top: 14pt;
+      margin-bottom: 6pt;
+      page-break-after: avoid;
+    }
+
+    /* ── Body text ── */
+    p {
+      margin: 0 0 8pt 0;
+    }
+
+    /* ── Callout boxes ── */
+    .callout {
+      background: #EBF3FB;
+      border-left: 4pt solid #0078D4;
+      padding: 10pt 14pt;
+      margin: 12pt 0;
+      border-radius: 0 3pt 3pt 0;
+    }
+    .callout-warn {
+      background: #FFF4CE;
+      border-left: 4pt solid #F2A900;
+    }
+    .callout-risk {
+      background: #FDE7E9;
+      border-left: 4pt solid #C50F1F;
+    }
+    .callout p {
+      margin: 0;
+    }
+
+    /* ── Tables ── */
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin: 12pt 0;
+      font-size: 10.5pt;
+    }
+    th {
+      background: #0078D4;
+      color: #fff;
+      font-weight: 600;
+      padding: 7pt 10pt;
+      text-align: left;
+      border: 1pt solid #0078D4;
+    }
+    td {
+      padding: 6pt 10pt;
+      border: 1pt solid #D0D7E2;
+      vertical-align: top;
+    }
+    tr:nth-child(even) td {
+      background: #F5F9FE;
+    }
+
+    /* ── Phase blocks ── */
+    .phase-block {
+      border: 1.5pt solid #0078D4;
+      border-radius: 4pt;
+      margin: 14pt 0;
+      page-break-inside: avoid;
+    }
+    .phase-header {
+      background: #0078D4;
+      color: #fff;
+      padding: 8pt 14pt;
+      font-weight: 700;
+      font-size: 11.5pt;
+    }
+    .phase-body {
+      padding: 10pt 14pt;
+    }
+    .phase-body ul {
+      margin: 4pt 0;
+      padding-left: 18pt;
+    }
+    .phase-body li {
+      margin-bottom: 4pt;
+    }
+
+    /* ── Status badges ── */
+    .badge {
+      display: inline-block;
+      font-size: 9pt;
+      font-weight: 600;
+      padding: 2pt 8pt;
+      border-radius: 10pt;
+      white-space: nowrap;
+    }
+    .badge-new    { background: #DFF6DD; color: #107C10; }
+    .badge-exists { background: #EBF3FB; color: #0078D4; }
+    .badge-high   { background: #FDE7E9; color: #C50F1F; }
+    .badge-med    { background: #FFF4CE; color: #835B00; }
+    .badge-low    { background: #F5F5F5; color: #555; }
+
+    /* ── Architecture flow box ── */
+    .arch-box {
+      border: 1pt solid #D0D7E2;
+      border-radius: 4pt;
+      padding: 12pt 16pt;
+      background: #FAFBFC;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 9.5pt;
+      color: #1a1a1a;
+      line-height: 1.7;
+      margin: 12pt 0;
+      white-space: pre;
+    }
+
+    /* ── Bullet lists ── */
+    ul, ol {
+      margin: 6pt 0 10pt 0;
+      padding-left: 20pt;
+    }
+    li {
+      margin-bottom: 4pt;
+    }
+
+    /* ── Page breaks ── */
+    .page-break {
+      page-break-after: always;
+    }
+
+    /* ── Footer line ── */
+    .doc-footer {
+      border-top: 1pt solid #ccc;
+      font-size: 9pt;
+      color: #888;
+      padding-top: 6pt;
+      margin-top: 24pt;
+    }
+
+    /* ── Section numbers ── */
+    .section-num {
+      color: #0078D4;
+      font-weight: 700;
+    }
+  </style>
+  <title>SRW — Workspace Application Launch: Implementation Plan &amp; Architecture</title>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════
+     COVER PAGE
+═══════════════════════════════════════════════════════════ -->
+<div class="cover">
+  <div class="cover-badge">Confidential &nbsp;·&nbsp; Architecture Document</div>
+  <div class="cover-title">Secure Research Workspace</div>
+  <div class="cover-subtitle">Workspace Application Launch<br/>Implementation Plan &amp; Architecture</div>
+  <hr class="cover-rule"/>
+  <div class="cover-meta">
+    <strong>Platform:</strong> Azure TRE + Azure Kubernetes Service (AKS)<br/>
+    <strong>Document Type:</strong> Technical Architecture &amp; Implementation Plan<br/>
+    <strong>Audience:</strong> Senior Principal Lead / Engineering Leadership<br/>
+    <strong>Status:</strong> Ready for Review<br/>
+    <strong>Version:</strong> 1.0<br/>
+    <strong>Date:</strong> June 2026
+  </div>
+  <div class="cover-footer">
+    Secure Research Workspace Platform &nbsp;·&nbsp; Engineering
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     TABLE OF CONTENTS
+═══════════════════════════════════════════════════════════ -->
+<div class="toc-page">
+  <h1>Table of Contents</h1>
+  <table style="border:none;">
+    <tr><td style="border:none; padding:4pt 0; width:30pt; color:#0078D4; font-weight:700;">1</td><td style="border:none; padding:4pt 0;">Executive Summary</td></tr>
+    <tr><td style="border:none; padding:4pt 0; color:#0078D4; font-weight:700;">2</td><td style="border:none; padding:4pt 0;">Current State &amp; Integration Context</td></tr>
+    <tr><td style="border:none; padding:4pt 0; color:#0078D4; font-weight:700;">3</td><td style="border:none; padding:4pt 0;">Solution Architecture</td></tr>
+    <tr><td style="border:none; padding:4pt 0; color:#0078D4; font-weight:700;">&nbsp;&nbsp;3.1</td><td style="border:none; padding:4pt 0;">Architecture Overview</td></tr>
+    <tr><td style="border:none; padding:4pt 0; color:#0078D4; font-weight:700;">&nbsp;&nbsp;3.2</td><td style="border:none; padding:4pt 0;">Clean Architecture Layers</td></tr>
+    <tr><td style="border:none; padding:4pt 0; color:#0078D4; font-weight:700;">&nbsp;&nbsp;3.3</td><td style="border:none; padding:4pt 0;">Kubernetes Resource Model</td></tr>
+    <tr><td style="border:none; padding:4pt 0; color:#0078D4; font-weight:700;">&nbsp;&nbsp;3.4</td><td style="border:none; padding:4pt 0;">Session Lifecycle &amp; Async Pattern</td></tr>
+    <tr><td style="border:none; padding:4pt 0; color:#0078D4; font-weight:700;">&nbsp;&nbsp;3.5</td><td style="border:none; padding:4pt 0;">Per-User Storage Isolation</td></tr>
+    <tr><td style="border:none; padding:4pt 0; color:#0078D4; font-weight:700;">&nbsp;&nbsp;3.6</td><td style="border:none; padding:4pt 0;">React UI Session Flow</td></tr>
+    <tr><td style="border:none; padding:4pt 0; color:#0078D4; font-weight:700;">4</td><td style="border:none; padding:4pt 0;">Implementation Plan</td></tr>
+    <tr><td style="border:none; padding:4pt 0; color:#0078D4; font-weight:700;">&nbsp;&nbsp;4.1</td><td style="border:none; padding:4pt 0;">Phase 1 — AKS Namespace Provisioning</td></tr>
+    <tr><td style="border:none; padding:4pt 0; color:#0078D4; font-weight:700;">&nbsp;&nbsp;4.2</td><td style="border:none; padding:4pt 0;">Phase 2 — Application Catalogue &amp; Domain Layer</td></tr>
+    <tr><td style="border:none; padding:4pt 0; color:#0078D4; font-weight:700;">&nbsp;&nbsp;4.3</td><td style="border:none; padding:4pt 0;">Phase 3 — Session Launch Backend</td></tr>
+    <tr><td style="border:none; padding:4pt 0; color:#0078D4; font-weight:700;">&nbsp;&nbsp;4.4</td><td style="border:none; padding:4pt 0;">Phase 4 — React UI</td></tr>
+    <tr><td style="border:none; padding:4pt 0; color:#0078D4; font-weight:700;">&nbsp;&nbsp;4.5</td><td style="border:none; padding:4pt 0;">Phase 5 — End-to-End Testing</td></tr>
+    <tr><td style="border:none; padding:4pt 0; color:#0078D4; font-weight:700;">5</td><td style="border:none; padding:4pt 0;">Work Item Summary (ADO Tasks)</td></tr>
+    <tr><td style="border:none; padding:4pt 0; color:#0078D4; font-weight:700;">6</td><td style="border:none; padding:4pt 0;">Key Technical Decisions</td></tr>
+    <tr><td style="border:none; padding:4pt 0; color:#0078D4; font-weight:700;">7</td><td style="border:none; padding:4pt 0;">Risks &amp; Mitigations</td></tr>
+    <tr><td style="border:none; padding:4pt 0; color:#0078D4; font-weight:700;">8</td><td style="border:none; padding:4pt 0;">Dependencies &amp; Prerequisites</td></tr>
+    <tr><td style="border:none; padding:4pt 0; color:#0078D4; font-weight:700;">9</td><td style="border:none; padding:4pt 0;">Definition of Done</td></tr>
+  </table>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     1. EXECUTIVE SUMMARY
+═══════════════════════════════════════════════════════════ -->
+<h1><span class="section-num">1.</span> Executive Summary</h1>
+
+<p>
+The Secure Research Workspace (SRW) platform is built on top of <strong>Azure Trusted Research Environment (Azure TRE)</strong>, which today provisions isolated Azure Storage Accounts and File Shares for each research workspace. This document describes the plan to extend the platform with the capability for researchers to <strong>launch, access, and manage containerised analytical applications</strong> — Jupyter Notebook, RStudio, and custom Docker applications — directly within their provisioned workspace, from a React-based browser UI.
+</p>
+
+<div class="callout">
+  <p><strong>Scope in one sentence:</strong> Extend the existing TRE workspace application so that every researcher assigned to a workspace can click an application icon in the browser, have a personal containerised environment spin up on AKS within minutes, and access it via a browser URL — with full data isolation, async provisioning, and clean lifecycle management.</p>
+</div>
+
+<p>The implementation spans five layers:</p>
+<ul>
+  <li><strong>Terraform infrastructure</strong> — AKS namespace provisioning (new) and per-session K8s resource management</li>
+  <li><strong>Backend API</strong> — ASP.NET Core Minimal API with Clean Architecture; async session launch pattern</li>
+  <li><strong>Background workers</strong> — Terraform orchestration, K8s status polling, session stop, idle cleanup</li>
+  <li><strong>React UI</strong> — application gallery, click-to-launch flow, session status polling, stop</li>
+  <li><strong>End-to-end testing</strong> — live Jupyter, RStudio, storage isolation, stop flows</li>
+</ul>
+
+<table>
+  <tr><th>Metric</th><th>Value</th></tr>
+  <tr><td>Total ADO Tasks</td><td>28 tasks</td></tr>
+  <tr><td>Total Estimated Effort</td><td>82 hours</td></tr>
+  <tr><td>Story Points</td><td>26</td></tr>
+  <tr><td>Implementation Phases</td><td>5 phases</td></tr>
+  <tr><td>Application Types Supported</td><td>Jupyter Notebook, RStudio, Custom Docker</td></tr>
+  <tr><td>Infrastructure Backend</td><td>Terraform CLI (azurerm + kubernetes providers)</td></tr>
+  <tr><td>AKS Ingress</td><td>nginx-ingress with path-based routing per session</td></tr>
+</table>
+
+<div class="page-break"></div>
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     2. CURRENT STATE & INTEGRATION CONTEXT
+═══════════════════════════════════════════════════════════ -->
+<h1><span class="section-num">2.</span> Current State &amp; Integration Context</h1>
+
+<h2>2.1 What Azure TRE Provides Today</h2>
+<p>Azure TRE handles the Azure-plane workspace boundary. The following resources are already provisioned by TRE when a workspace is created and are <strong>not in scope</strong> for this implementation:</p>
+
+<table>
+  <tr><th>Resource</th><th>Naming Convention</th><th>Provisioned By</th></tr>
+  <tr><td>Azure Storage Account</td><td><code>srw&lt;guid&gt;</code></td><td><span class="badge badge-exists">Azure TRE</span></td></tr>
+  <tr><td>Azure File Share (SMB)</td><td><code>workspace-share</code></td><td><span class="badge badge-exists">Azure TRE</span></td></tr>
+  <tr><td>Storage Account Key</td><td>Available as TRE output</td><td><span class="badge badge-exists">Azure TRE</span></td></tr>
+</table>
+
+<h2>2.2 Gap: What TRE Does Not Provide</h2>
+<p>TRE does not manage Kubernetes resources. The AKS namespace, network isolation, the K8s Secret that binds TRE's storage account key to the CSI driver, and all per-session K8s objects (Deployments, Services, Ingress rules) must be created and managed by this platform layer.</p>
+
+<table>
+  <tr><th>Capability</th><th>Status</th></tr>
+  <tr><td>AKS namespace per workspace</td><td><span class="badge badge-new">New — this implementation</span></td></tr>
+  <tr><td>K8s Secret for Azure File CSI driver</td><td><span class="badge badge-new">New — this implementation</span></td></tr>
+  <tr><td>Default-deny NetworkPolicy (workspace isolation)</td><td><span class="badge badge-new">New — this implementation</span></td></tr>
+  <tr><td>Application catalogue (WorkspaceApplication entity)</td><td><span class="badge badge-new">New — this implementation</span></td></tr>
+  <tr><td>Per-user session K8s Deployment + Service + Ingress</td><td><span class="badge badge-new">New — this implementation</span></td></tr>
+  <tr><td>Per-user storage isolation (CSI sub_path)</td><td><span class="badge badge-new">New — this implementation</span></td></tr>
+  <tr><td>Async session API (202 pattern + polling)</td><td><span class="badge badge-new">New — this implementation</span></td></tr>
+  <tr><td>React UI click-to-launch flow</td><td><span class="badge badge-new">New — this implementation</span></td></tr>
+</table>
+
+<div class="page-break"></div>
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     3. SOLUTION ARCHITECTURE
+═══════════════════════════════════════════════════════════ -->
+<h1><span class="section-num">3.</span> Solution Architecture</h1>
+
+<h2>3.1 Architecture Overview</h2>
+
+<div class="arch-box">┌─────────────────────────────────────────────────────────────────────┐
+│                        Researcher Browser                           │
+│   React UI:  Workspace page → AppCard gallery → Click to launch    │
+└──────────────────────────────┬──────────────────────────────────────┘
+                               │  HTTPS  (X-User-Id header)
+                               ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                    SRW API  (ASP.NET Core — AKS pod)                │
+│                                                                     │
+│  POST /sessions ──► SessionLauncher ──► ISessionProvisioningQueue  │
+│  GET  /sessions/{id} ◄── Cosmos DB (live status)                   │
+│  DELETE /sessions/{id} ──► Service Bus (session-stop queue)        │
+└──────────────┬───────────────────────────────────┬─────────────────┘
+               │                                   │
+      ┌────────▼────────┐               ┌──────────▼──────────┐
+      │ SessionLaunch   │               │  SessionStop        │
+      │ Worker          │               │  Consumer           │
+      │ (Channel&lt;T&gt;)   │               │  (Service Bus)      │
+      │                 │               │                     │
+      │ terraform apply │               │ terraform destroy   │
+      └────────┬────────┘               └──────────┬──────────┘
+               │                                   │
+               ▼                                   ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│              AKS Cluster  (workspace namespace: ws-&lt;name&gt;-&lt;id&gt;)    │
+│                                                                     │
+│  ┌─────────────────────────────────────────────────────────────┐   │
+│  │  Per-User Session                                           │   │
+│  │  kubernetes_deployment  sess-&lt;8hex&gt;                        │   │
+│  │    └── container: Jupyter / RStudio / Custom               │   │
+│  │          └── VolumeMount: workspace-share / sub_path=userId│   │
+│  │  kubernetes_service     svc-&lt;8hex&gt;   (ClusterIP)           │   │
+│  │  kubernetes_ingress_v1  /s/&lt;slug&gt;/   (nginx)               │   │
+│  └─────────────────────────────────────────────────────────────┘   │
+│                                                                     │
+│  azure-storage-creds Secret  ←── TRE Storage Key                  │
+│  NetworkPolicy: default-deny (ingress-nginx only)                  │
+└─────────────────────────────────────────────────────────────────────┘
+               │
+               ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│              Azure Storage (provisioned by TRE)                     │
+│  Storage Account: srw&lt;guid&gt;                                        │
+│  File Share: workspace-share                                        │
+│    ├── /alice/   (sub_path for user alice)                         │
+│    └── /bob/     (sub_path for user bob)                           │
+└─────────────────────────────────────────────────────────────────────┘</div>
+
+<h2>3.2 Clean Architecture Layers</h2>
+<p>The backend follows strict Clean Architecture. Dependencies flow inward only — no outer layer references are allowed in inner layers.</p>
+
+<table>
+  <tr><th>Layer</th><th>Project</th><th>Responsibility</th></tr>
+  <tr><td><strong>Domain</strong></td><td>SRW.Domain</td><td>Entities only: <code>WorkspaceApplication</code>, <code>UserSession</code>, <code>SessionStatus</code> enum. No external dependencies.</td></tr>
+  <tr><td><strong>Core</strong></td><td>SRW.Core</td><td>Application services (<code>SessionLauncher</code>) and interface abstractions (<code>ISessionProvisioningQueue</code>, <code>IKubernetesOrchestrator</code>, <code>ISessionRepository</code>).</td></tr>
+  <tr><td><strong>Infrastructure</strong></td><td>SRW.Infrastructure</td><td>Implements interfaces: Terraform CLI orchestration (<code>TerraformOrchestrator</code>), background workers (<code>SessionLaunchWorker</code>, <code>SessionStatusPoller</code>, <code>SessionStopConsumer</code>, <code>IdleSessionReaper</code>), Cosmos DB repositories.</td></tr>
+  <tr><td><strong>API</strong></td><td>SRW.Api</td><td>ASP.NET Core Minimal API endpoints (<code>SessionEndpoints</code>, <code>ApplicationEndpoints</code>), DI composition root (<code>Program.cs</code>), auth middleware.</td></tr>
+  <tr><td><strong>UI</strong></td><td>React (existing app)</td><td>Session API client (<code>sessionApi.ts</code>), <code>useSessionPoller</code> hook, <code>AppCard</code> component, workspace applications page, active sessions panel.</td></tr>
+</table>
+
+<h2>3.3 Kubernetes Resource Model</h2>
+<p>The platform manages two tiers of Kubernetes resources, each backed by a separate Terraform state file in Azure Blob storage:</p>
+
+<table>
+  <tr><th>Tier</th><th>Resources Created</th><th>Lifecycle</th><th>Terraform State Key</th></tr>
+  <tr>
+    <td><strong>Workspace (once per workspace)</strong></td>
+    <td><code>kubernetes_namespace</code><br/><code>kubernetes_secret</code> (azure-storage-creds)<br/><code>kubernetes_network_policy</code> (default-deny)</td>
+    <td>Created when workspace activates. Destroyed when workspace is deleted.</td>
+    <td><code>workspaces/{k8sNamespace}-k8s.tfstate</code></td>
+  </tr>
+  <tr>
+    <td><strong>Session (once per user per launch)</strong></td>
+    <td><code>kubernetes_deployment</code> (1 replica)<br/><code>kubernetes_service</code> (ClusterIP)<br/><code>kubernetes_ingress_v1</code> (path-based)</td>
+    <td>Created on session launch. Destroyed on session stop or idle reap.</td>
+    <td><code>sessions/{sessionId}.tfstate</code></td>
+  </tr>
+</table>
+
+<div class="callout">
+  <p><strong>Security:</strong> The Azure Storage Account key (from TRE) is bound into the <code>azure-storage-creds</code> K8s Secret at namespace creation time, passed exclusively as the environment variable <code>TF_VAR_storage_account_key</code> — it is never written to a <code>.tfvars</code> file on disk or stored in Terraform state in plaintext.</p>
+</div>
+
+<h2>3.4 Session Lifecycle &amp; Async Pattern</h2>
+<p>Because Terraform provisioning takes 2–3 minutes per session, the API uses an async pattern. The HTTP request returns immediately; a background worker does the slow work; the client polls for status.</p>
+
+<div class="arch-box">Researcher clicks Launch in UI
+       │
+       ▼
+POST /api/workspaces/{id}/sessions
+       │  (&lt; 2 seconds)
+       ▼
+202 Accepted  {status: "Starting", accessUrl: null}
+       │
+       ▼  (SessionLaunchWorker — background, ~2-3 min)
+  terraform init + apply
+  → K8s Deployment + Service + Ingress created
+  → session.DeploymentName, ServiceName, AccessUrl written to DB
+       │
+       ▼  (SessionStatusPoller — every 5 s)
+  GET K8s pod readyReplicas
+  → status updated to "Running" when pod is ready
+       │
+       ▼
+GET /sessions/{id}  → {status: "Running", accessUrl: "https://…/s/&lt;slug&gt;/"}</div>
+
+<p>The status lifecycle visible to all consumers (API, UI, background workers):</p>
+
+<table>
+  <tr><th>Status</th><th>Meaning</th><th>Set by</th></tr>
+  <tr><td><code>Starting</code></td><td>Session created in DB; Terraform apply in progress</td><td>SessionLauncher (on enqueue)</td></tr>
+  <tr><td><code>Running</code></td><td>Pod has ≥1 ready replica; accessUrl is populated</td><td>SessionStatusPoller</td></tr>
+  <tr><td><code>Stopping</code></td><td>DELETE called; teardown queued to Service Bus</td><td>SessionEndpoints (DELETE handler)</td></tr>
+  <tr><td><code>Stopped</code></td><td>K8s resources destroyed; session ended</td><td>SessionStopConsumer</td></tr>
+  <tr><td><code>Failed</code></td><td>Terraform apply threw an exception</td><td>SessionLaunchWorker (catch block)</td></tr>
+</table>
+
+<h2>3.5 Per-User Storage Isolation</h2>
+<p>All researchers in a workspace share one Azure File Share (<code>workspace-share</code>) provisioned by TRE. Isolation is enforced at the Kubernetes volume mount level using the CSI driver's <code>sub_path</code> feature:</p>
+
+<div class="arch-box">workspace-share (Azure File Share — TRE provisioned)
+├── alice-research/          ← sub_path for user "alice-research"
+│     ├── my_notebook.ipynb
+│     └── results/
+└── bob_dev/                 ← sub_path for user "bob_dev"
+      └── analysis.R
+
+Each session pod mounts only its own sub_path directory.
+Users cannot navigate above their mount point to reach another user's directory.</div>
+
+<p>The <code>sub_path</code> value is a sanitised form of the user ID: all characters except <code>[a-z0-9._-]</code> are replaced with <code>-</code>. The subdirectory is created automatically on first mount — no pre-provisioning required.</p>
+
+<h2>3.6 React UI Session Flow</h2>
+<p>The React UI introduces a state machine for each application card. The UI makes no assumptions about provisioning time — it shows progressive feedback throughout.</p>
+
+<table>
+  <tr><th>UI State</th><th>Visual</th><th>User Action Available</th></tr>
+  <tr><td><strong>Idle</strong></td><td>App icon + name + Launch button</td><td>Click Launch</td></tr>
+  <tr><td><strong>Launching</strong></td><td>Spinner overlay, "Requesting…"</td><td>None (button disabled)</td></tr>
+  <tr><td><strong>Starting</strong></td><td>Spinner overlay, "Starting… (may take a few minutes)"</td><td>None (button disabled)</td></tr>
+  <tr><td><strong>Running</strong></td><td>Green active badge, Open button, Stop button</td><td>Open in new tab / Stop</td></tr>
+  <tr><td><strong>Stopping</strong></td><td>Spinner overlay, "Stopping…"</td><td>None</td></tr>
+  <tr><td><strong>Failed</strong></td><td>Red error badge + error message</td><td>Retry</td></tr>
+</table>
+
+<div class="callout">
+  <p><strong>Idempotency:</strong> If a researcher clicks Launch while a session is already <code>Starting</code> or <code>Running</code>, the API returns the existing session (no duplicate deployment). The UI's click handler is disabled during <code>Launching</code> and <code>Starting</code> states as an additional safeguard.</p>
+</div>
+
+<div class="page-break"></div>
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     4. IMPLEMENTATION PLAN
+═══════════════════════════════════════════════════════════ -->
+<h1><span class="section-num">4.</span> Implementation Plan</h1>
+
+<p>The implementation is structured into five sequential phases. Each phase is independently deployable and testable. Phases 1–3 are backend; Phase 4 is UI; Phase 5 is cross-cutting E2E verification.</p>
+
+<div class="phase-block">
+  <div class="phase-header">Phase 1 &nbsp;·&nbsp; AKS Namespace Provisioning &nbsp;·&nbsp; ~14 hours</div>
+  <div class="phase-body">
+    <p><strong>Goal:</strong> After Azure TRE provisions a workspace's Storage Account and File Share, automatically create the matching AKS namespace with network isolation and the storage credential Secret needed by the CSI driver.</p>
+    <p><strong>Why first:</strong> All subsequent session launches depend on the namespace and CSI Secret existing. Nothing else can proceed without this.</p>
+    <ul>
+      <li><strong>T-01</strong> — Terraform <code>workspace-k8s</code> module: <code>kubernetes_namespace</code>, <code>azure-storage-creds</code> Secret, default-deny <code>NetworkPolicy</code></li>
+      <li><strong>T-08</strong> — <code>TerraformRunner</code>: <code>backend.tfbackend</code> file, init-skip optimisation, process kill on cancel</li>
+      <li><strong>T-09</strong> — <code>TerraformOrchestrator.EnsureWorkspaceNamespaceAsync</code> + <code>DeleteWorkspaceNamespaceAsync</code></li>
+    </ul>
+    <p><strong>Exit criteria:</strong> After workspace activation, <code>kubectl get ns</code> shows the workspace namespace with <code>azure-storage-creds</code> Secret and default-deny policy in place.</p>
+  </div>
+</div>
+
+<div class="phase-block">
+  <div class="phase-header">Phase 2 &nbsp;·&nbsp; Application Catalogue &amp; Domain Layer &nbsp;·&nbsp; ~8 hours</div>
+  <div class="phase-body">
+    <p><strong>Goal:</strong> Introduce the <code>WorkspaceApplication</code> and <code>UserSession</code> domain entities, the <code>ISessionProvisioningQueue</code> interface, the <code>SessionLauncher</code> service, and the <code>ApplicationEndpoints</code> API so workspace admins can register applications.</p>
+    <ul>
+      <li><strong>T-04</strong> — <code>WorkspaceApplication</code> entity</li>
+      <li><strong>T-05</strong> — <code>UserSession</code> entity + <code>SessionStatus</code> enum</li>
+      <li><strong>T-06</strong> — <code>ISessionProvisioningQueue</code> interface (Core layer)</li>
+      <li><strong>T-07</strong> — <code>SessionLauncher</code>: validate → persist Starting session → enqueue → return immediately</li>
+      <li><strong>T-15</strong> — <code>ApplicationEndpoints</code>: <code>POST</code> / <code>GET</code> applications</li>
+    </ul>
+    <p><strong>Exit criteria:</strong> A workspace admin can register a Jupyter application via <code>POST /api/workspaces/{id}/applications</code> and retrieve it via <code>GET</code>.</p>
+  </div>
+</div>
+
+<div class="phase-block">
+  <div class="phase-header">Phase 3 &nbsp;·&nbsp; Session Launch Backend &nbsp;·&nbsp; ~19 hours</div>
+  <div class="phase-body">
+    <p><strong>Goal:</strong> Deliver the complete backend session lifecycle — launch (async), status polling, stop, and idle cleanup — backed by the session Terraform module.</p>
+    <ul>
+      <li><strong>T-02</strong> — Terraform <code>session</code> module: Deployment + Service + Ingress + per-user <code>sub_path</code></li>
+      <li><strong>T-03</strong> — Terraform <code>app_configs.tf</code>: Jupyter / RStudio / Custom startup logic and ingress rewrite</li>
+      <li><strong>T-10</strong> — <code>TerraformOrchestrator.LaunchSessionAsync</code> + <code>StopSessionAsync</code> + <code>GetSessionStatusAsync</code></li>
+      <li><strong>T-11</strong> — <code>SessionLaunchWorker</code>: background channel worker, DI scope per item</li>
+      <li><strong>T-12</strong> — <code>SessionStatusPoller</code>: K8s readiness → Running transition</li>
+      <li><strong>T-13</strong> — <code>SessionStopConsumer</code>: Service Bus → terraform destroy → Stopped</li>
+      <li><strong>T-14</strong> — <code>IdleSessionReaper</code>: auto-stop beyond idle threshold</li>
+      <li><strong>T-16</strong> — <code>SessionEndpoints</code>: POST / GET / DELETE</li>
+      <li><strong>T-17</strong> — <code>Program.cs</code>: DI registration for all new services</li>
+    </ul>
+    <p><strong>Exit criteria:</strong> <code>POST /sessions</code> returns 202 in &lt;2 s; <code>GET /sessions/{id}</code> transitions from <code>Starting</code> to <code>Running</code> once the pod is ready; <code>DELETE</code> tears down K8s resources cleanly.</p>
+  </div>
+</div>
+
+<div class="phase-block">
+  <div class="phase-header">Phase 4 &nbsp;·&nbsp; React UI &nbsp;·&nbsp; ~21 hours</div>
+  <div class="phase-body">
+    <p><strong>Goal:</strong> Integrate the session API into the existing React workspace application so researchers experience a seamless click-to-launch flow with live status feedback.</p>
+    <ul>
+      <li><strong>T-22</strong> — <code>sessionApi.ts</code>: typed fetch wrappers (launchSession, getSession, listSessions, stopSession)</li>
+      <li><strong>T-23</strong> — <code>useSessionPoller</code> hook: polls GET at interval, stops on terminal state, cleans up on unmount</li>
+      <li><strong>T-24</strong> — <code>AppCard</code> component: 6 visual states (Idle / Launching / Starting / Running / Stopping / Failed)</li>
+      <li><strong>T-25</strong> — Workspace applications page: gallery of AppCards, load existing sessions on mount</li>
+      <li><strong>T-26</strong> — Session launch flow: click handler state machine — POST → Starting → Running/Failed</li>
+      <li><strong>T-27</strong> — Active sessions panel: list of Running sessions with Open and Stop actions</li>
+      <li><strong>T-28</strong> — Session stop flow: confirmation dialog → DELETE → card reset to Idle</li>
+    </ul>
+    <p><strong>Exit criteria:</strong> Researcher clicks a Jupyter icon, sees "Starting…" feedback, and the application opens in a new browser tab when ready. Running sessions persist across page reloads.</p>
+  </div>
+</div>
+
+<div class="phase-block">
+  <div class="phase-header">Phase 5 &nbsp;·&nbsp; End-to-End Testing &nbsp;·&nbsp; ~12 hours</div>
+  <div class="phase-body">
+    <p><strong>Goal:</strong> Verify all flows against a real AKS cluster and TRE-provisioned workspace before sign-off.</p>
+    <ul>
+      <li><strong>T-18</strong> — E2E: Jupyter session launch, browser access, file persistence</li>
+      <li><strong>T-19</strong> — E2E: RStudio session, path prefix correctness, UI verification</li>
+      <li><strong>T-20</strong> — E2E: Per-user storage isolation (two researchers, same workspace)</li>
+      <li><strong>T-21</strong> — E2E: Session stop (DELETE) and idle reaper cleanup</li>
+    </ul>
+    <p><strong>Exit criteria:</strong> All four E2E scenarios pass against a live cluster. No orphaned K8s resources after stop. Storage isolation confirmed with two concurrent users.</p>
+  </div>
+</div>
+
+<div class="page-break"></div>
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     5. WORK ITEM SUMMARY
+═══════════════════════════════════════════════════════════ -->
+<h1><span class="section-num">5.</span> Work Item Summary (ADO Tasks)</h1>
+
+<table>
+  <tr><th>#</th><th>Phase</th><th>Area</th><th>Title</th><th>Hours</th></tr>
+  <tr><td>T-01</td><td>1</td><td>Terraform</td><td>workspace-k8s module — Namespace + CSI Secret + NetworkPolicy</td><td>4 h</td></tr>
+  <tr><td>T-02</td><td>3</td><td>Terraform</td><td>session module — K8s Deployment + Service + Ingress</td><td>6 h</td></tr>
+  <tr><td>T-03</td><td>3</td><td>Terraform</td><td>session module — app-type startup logic (Jupyter / RStudio / Custom)</td><td>4 h</td></tr>
+  <tr><td>T-04</td><td>2</td><td>Domain</td><td>WorkspaceApplication entity</td><td>2 h</td></tr>
+  <tr><td>T-05</td><td>2</td><td>Domain</td><td>UserSession entity + SessionStatus enum</td><td>2 h</td></tr>
+  <tr><td>T-06</td><td>2</td><td>Core</td><td>ISessionProvisioningQueue interface</td><td>1 h</td></tr>
+  <tr><td>T-07</td><td>2</td><td>Core</td><td>SessionLauncher — validate, persist, enqueue, return fast</td><td>3 h</td></tr>
+  <tr><td>T-08</td><td>1</td><td>Infrastructure</td><td>TerraformRunner — backend file, init-skip, process kill on cancel</td><td>4 h</td></tr>
+  <tr><td>T-09</td><td>1</td><td>Infrastructure</td><td>TerraformOrchestrator — EnsureWorkspaceNamespaceAsync</td><td>3 h</td></tr>
+  <tr><td>T-10</td><td>3</td><td>Infrastructure</td><td>TerraformOrchestrator — LaunchSessionAsync + StopSessionAsync</td><td>4 h</td></tr>
+  <tr><td>T-11</td><td>3</td><td>Infrastructure</td><td>SessionLaunchWorker — background channel worker</td><td>4 h</td></tr>
+  <tr><td>T-12</td><td>3</td><td>Infrastructure</td><td>SessionStatusPoller — K8s pod readiness → Running transition</td><td>3 h</td></tr>
+  <tr><td>T-13</td><td>3</td><td>Infrastructure</td><td>SessionStopConsumer — Service Bus → terraform destroy</td><td>3 h</td></tr>
+  <tr><td>T-14</td><td>3</td><td>Infrastructure</td><td>IdleSessionReaper — idle threshold cleanup</td><td>2 h</td></tr>
+  <tr><td>T-15</td><td>2</td><td>API</td><td>ApplicationEndpoints — register + list applications</td><td>2 h</td></tr>
+  <tr><td>T-16</td><td>3</td><td>API</td><td>SessionEndpoints — POST / GET / DELETE sessions</td><td>3 h</td></tr>
+  <tr><td>T-17</td><td>3</td><td>API</td><td>Program.cs — DI registration for all new services</td><td>2 h</td></tr>
+  <tr><td>T-18</td><td>5</td><td>Test</td><td>E2E — Jupyter session launch, browser access, file persistence</td><td>3 h</td></tr>
+  <tr><td>T-19</td><td>5</td><td>Test</td><td>E2E — RStudio session, path prefix, UI correctness</td><td>2 h</td></tr>
+  <tr><td>T-20</td><td>5</td><td>Test</td><td>E2E — Per-user storage isolation (two users, same workspace)</td><td>2 h</td></tr>
+  <tr><td>T-21</td><td>5</td><td>Test</td><td>E2E — Session stop and idle reaper cleanup</td><td>2 h</td></tr>
+  <tr><td>T-22</td><td>4</td><td>UI</td><td>sessionApi.ts — typed fetch wrappers for POST / GET / DELETE</td><td>2 h</td></tr>
+  <tr><td>T-23</td><td>4</td><td>UI</td><td>useSessionPoller hook — polls until terminal state</td><td>3 h</td></tr>
+  <tr><td>T-24</td><td>4</td><td>UI</td><td>AppCard component — app icon with session status overlay</td><td>4 h</td></tr>
+  <tr><td>T-25</td><td>4</td><td>UI</td><td>Workspace applications page — gallery + load existing sessions on mount</td><td>3 h</td></tr>
+  <tr><td>T-26</td><td>4</td><td>UI</td><td>Session launch flow — click handler state machine</td><td>3 h</td></tr>
+  <tr><td>T-27</td><td>4</td><td>UI</td><td>Active sessions panel — Running sessions with Open / Stop</td><td>3 h</td></tr>
+  <tr><td>T-28</td><td>4</td><td>UI</td><td>Session stop flow — confirmation dialog, DELETE, card reset</td><td>3 h</td></tr>
+  <tr><td colspan="4"><strong>Total</strong></td><td><strong>82 h</strong></td></tr>
+</table>
+
+<div class="page-break"></div>
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     6. KEY TECHNICAL DECISIONS
+═══════════════════════════════════════════════════════════ -->
+<h1><span class="section-num">6.</span> Key Technical Decisions</h1>
+
+<h2>6.1 Terraform as the Infrastructure Backend</h2>
+<p>Rather than imperative Azure SDK / Kubernetes client calls, all infrastructure operations are declared as Terraform modules (<code>azurerm</code> + <code>kubernetes</code> providers). The API shells out to the Terraform CLI.</p>
+<table>
+  <tr><th>Benefit</th><th>Detail</th></tr>
+  <tr><td>Declarative drift detection</td><td>Terraform state tracks what was created; re-applying is idempotent</td></tr>
+  <tr><td>Destroy is symmetric</td><td><code>terraform destroy</code> removes exactly what <code>apply</code> created — no manual cleanup code</td></tr>
+  <tr><td>Remote state</td><td>Azure Blob backend; each workspace/session has its own <code>.tfstate</code> file — no state contention</td></tr>
+  <tr><td>Init-skip optimisation</td><td><code>terraform init</code> is skipped if <code>.terraform/</code> already exists, saving 20–60 s per repeated operation</td></tr>
+</table>
+
+<h2>6.2 Async Session Launch (202 Accepted Pattern)</h2>
+<p>Terraform provisioning takes 2–3 minutes. Blocking the HTTP request would cause client timeouts and poor UX. The pattern used:</p>
+<ul>
+  <li>HTTP handler does only synchronous work: validate, persist <code>Starting</code> session, enqueue. Returns <code>202 Accepted</code> in &lt; 2 seconds.</li>
+  <li><code>SessionLaunchWorker</code> (in-process <code>Channel&lt;T&gt;</code>) dequeues and runs Terraform in the background.</li>
+  <li><code>SessionStatusPoller</code> polls K8s pod readiness and updates the session to <code>Running</code>.</li>
+  <li>Client polls <code>GET /sessions/{id}</code> — typically every 5 seconds — until <code>Running</code> or <code>Failed</code>.</li>
+</ul>
+
+<h2>6.3 In-Process Channel vs. Service Bus for Session Launch</h2>
+<p>Session launch uses an in-process <code>System.Threading.Channels</code> queue; session stop uses Service Bus. The distinction is intentional:</p>
+<table>
+  <tr><th></th><th>Session Launch</th><th>Session Stop</th></tr>
+  <tr><td><strong>Mechanism</strong></td><td>In-process Channel&lt;T&gt;</td><td>Azure Service Bus</td></tr>
+  <tr><td><strong>Reason</strong></td><td>Initiated from the same process; sub-millisecond enqueue; no durability needed — a restart with a Starting session is cleaned up by the poller or reaper</td><td>Must survive API pod restart mid-teardown; Service Bus provides at-least-once delivery and dead-lettering</td></tr>
+</table>
+
+<h2>6.4 ISessionProvisioningQueue in Core, Not Infrastructure</h2>
+<p><code>SessionLauncher</code> (Core layer) must not reference Infrastructure types. Defining <code>ISessionProvisioningQueue</code> in <code>SRW.Core.Abstractions</code> keeps the Clean Architecture dependency arrow pointing inward. <code>SessionLaunchWorker</code> (Infrastructure) implements it.</p>
+
+<h2>6.5 Ingress Path Routing: Jupyter vs. RStudio</h2>
+<p>The two supported app types require different nginx behaviour because they handle their own public path differently:</p>
+<table>
+  <tr><th>App Type</th><th>Ingress Rewrite</th><th>Why</th></tr>
+  <tr><td>Jupyter</td><td>No rewrite — path passed through as-is</td><td>Jupyter accepts <code>--NotebookApp.base_url=/s/&lt;slug&gt;/</code> at startup and generates all URLs with the prefix already included</td></tr>
+  <tr><td>RStudio</td><td><code>rewrite-target: /$2</code> (strips prefix)</td><td>RStudio does not support a <code>--base-url</code> flag; the prefix is injected via <code>www-root-path</code> in <code>rserver.conf</code> before startup; nginx must strip the prefix before forwarding</td></tr>
+  <tr><td>Custom</td><td>No rewrite (default)</td><td>Supports <code>__BASE_URL__</code> token substitution in <code>commandJson</code></td></tr>
+</table>
+
+<div class="page-break"></div>
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     7. RISKS & MITIGATIONS
+═══════════════════════════════════════════════════════════ -->
+<h1><span class="section-num">7.</span> Risks &amp; Mitigations</h1>
+
+<table>
+  <tr><th>#</th><th>Risk</th><th>Likelihood</th><th>Impact</th><th>Mitigation</th></tr>
+  <tr>
+    <td>R-01</td>
+    <td>Terraform apply duration (~2-3 min) frustrates researchers expecting instant launch</td>
+    <td><span class="badge badge-high">High</span></td>
+    <td><span class="badge badge-med">Medium</span></td>
+    <td>Async API (202 pattern) + UI progress indicator eliminates blocking wait. Terraform provider plugin cache (<code>TF_PLUGIN_CACHE_DIR</code>) and init-skip reduce cold-start time significantly.</td>
+  </tr>
+  <tr>
+    <td>R-02</td>
+    <td>Storage account key exposed in Terraform state or working directory</td>
+    <td><span class="badge badge-med">Medium</span></td>
+    <td><span class="badge badge-high">High</span></td>
+    <td>Key passed exclusively as <code>TF_VAR_storage_account_key</code> environment variable — never written to <code>.tfvars</code>. Remote state in Azure Blob with RBAC-controlled access.</td>
+  </tr>
+  <tr>
+    <td>R-03</td>
+    <td>Session stuck in Starting if API pod restarts mid-provisioning</td>
+    <td><span class="badge badge-med">Medium</span></td>
+    <td><span class="badge badge-med">Medium</span></td>
+    <td>IdleSessionReaper detects Starting sessions older than the configured threshold and marks them Failed, freeing the researcher to retry. Working directory on persistent storage allows Terraform resume.</td>
+  </tr>
+  <tr>
+    <td>R-04</td>
+    <td>Per-user storage isolation failure — users accessing each other's data</td>
+    <td><span class="badge badge-low">Low</span></td>
+    <td><span class="badge badge-high">High</span></td>
+    <td><code>sub_path</code> is enforced at the CSI driver / OS level, not application level. E2E test T-20 explicitly verifies isolation with two concurrent users before sign-off.</td>
+  </tr>
+  <tr>
+    <td>R-05</td>
+    <td>nginx-ingress annotation <code>configuration-snippet</code> blocked by cluster admission webhook</td>
+    <td><span class="badge badge-med">Medium</span></td>
+    <td><span class="badge badge-low">Low</span></td>
+    <td>This implementation uses only standard annotations (<code>rewrite-target</code>, <code>proxy-read-timeout</code>) — no <code>configuration-snippet</code>. Known cluster restriction documented in platform runbook.</td>
+  </tr>
+  <tr>
+    <td>R-06</td>
+    <td>Terraform state file contention if two launches for the same session fire simultaneously</td>
+    <td><span class="badge badge-low">Low</span></td>
+    <td><span class="badge badge-med">Medium</span></td>
+    <td>Idempotency check in <code>SessionLauncher</code> returns the existing session before enqueueing; single-reader channel ensures only one worker processes each session ID. Azure Blob backend provides state locking.</td>
+  </tr>
+  <tr>
+    <td>R-07</td>
+    <td>Data Protection key ring machine-local — cannot decrypt existing secrets on a new API pod</td>
+    <td><span class="badge badge-med">Medium</span></td>
+    <td><span class="badge badge-med">Medium</span></td>
+    <td>Migrate Data Protection key ring to Azure Blob + Key Vault (shared store) before scaling API to multiple replicas. Documented as a follow-on hardening item.</td>
+  </tr>
+</table>
+
+<div class="page-break"></div>
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     8. DEPENDENCIES & PREREQUISITES
+═══════════════════════════════════════════════════════════ -->
+<h1><span class="section-num">8.</span> Dependencies &amp; Prerequisites</h1>
+
+<h2>8.1 Platform Prerequisites (One-Time Cluster Setup)</h2>
+<p>These must be in place before the first workspace namespace is provisioned. They are per-cluster, not per-workspace.</p>
+<table>
+  <tr><th>Prerequisite</th><th>Notes</th></tr>
+  <tr><td>nginx-ingress installed on AKS cluster</td><td>Required for path-based session routing. Install via <code>k8s/manifests/00-cluster-setup.yaml</code>.</td></tr>
+  <tr><td>Azure File CSI driver installed on AKS cluster</td><td>Required for SMB file share mounts. Enabled by default on AKS 1.21+.</td></tr>
+  <tr><td>Azure Blob container for Terraform remote state</td><td>Named container (e.g. <code>srw-tf-state</code>) in a dedicated storage account separate from workspace storage.</td></tr>
+  <tr><td>Terraform CLI binary accessible to the API process</td><td>Path configured via <code>appsettings.json → Terraform:TerraformBinaryPath</code>.</td></tr>
+  <tr><td>Azure RBAC for API identity</td><td>Contributor on workspace resource group; Storage Account Contributor; AKS RBAC to create namespaces and deployments.</td></tr>
+</table>
+
+<h2>8.2 Per-Workspace Prerequisites</h2>
+<p>These are provided by Azure TRE before Phase 1 (AKS namespace provisioning) can run for a given workspace.</p>
+<table>
+  <tr><th>Prerequisite</th><th>Provided by</th></tr>
+  <tr><td>Azure Storage Account (<code>srw&lt;guid&gt;</code>)</td><td>Azure TRE</td></tr>
+  <tr><td>Azure File Share (<code>workspace-share</code>)</td><td>Azure TRE</td></tr>
+  <tr><td>Storage Account Key</td><td>Azure TRE output — passed to <code>EnsureWorkspaceNamespaceAsync</code> as parameter</td></tr>
+</table>
+
+<h2>8.3 Developer Machine Prerequisites</h2>
+<p>For local development and testing (see <code>NEW_MACHINE_SETUP.md</code> in the repository):</p>
+<ul>
+  <li>.NET 8 SDK</li>
+  <li>Azure CLI (<code>az login</code>) — <code>DefaultAzureCredential</code> picks up local credentials</li>
+  <li><code>kubectl</code> + AKS kubeconfig (<code>az aks get-credentials -n srw-aks-dev -g srw-dev-rg</code>)</li>
+  <li>Terraform CLI binary at path matching <code>appsettings.Development.json → Terraform:TerraformBinaryPath</code></li>
+  <li><code>appsettings.Development.json</code> created from the <code>.example</code> template with real values</li>
+  <li>Node.js + npm (for React UI development)</li>
+</ul>
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     9. DEFINITION OF DONE
+═══════════════════════════════════════════════════════════ -->
+<h1><span class="section-num">9.</span> Definition of Done</h1>
+
+<table>
+  <tr><th>#</th><th>Criterion</th></tr>
+  <tr><td>1</td><td>All 28 ADO tasks completed and linked to the parent story</td></tr>
+  <tr><td>2</td><td><code>POST /sessions</code> returns <code>202 Accepted</code> in under 2 seconds for all application types</td></tr>
+  <tr><td>3</td><td>Jupyter session: launched end-to-end, reached Running, notebook accessible in browser, files persisted to user subdirectory</td></tr>
+  <tr><td>4</td><td>RStudio session: path prefix reflected correctly in UI, no broken asset URLs, terminal functional</td></tr>
+  <tr><td>5</td><td>Storage isolation verified: two researchers in the same workspace cannot access each other's mounted files</td></tr>
+  <tr><td>6</td><td>Session stop (DELETE) tears down all 3 K8s resources; session reaches Stopped in DB</td></tr>
+  <tr><td>7</td><td>Idle session reaper automatically stops sessions beyond the configured threshold</td></tr>
+  <tr><td>8</td><td>React UI: click-to-launch flow works end-to-end; returning researchers see correct Running/Starting state without a flash of Idle</td></tr>
+  <tr><td>9</td><td>Cancelling a request does not leave an orphaned <code>terraform.exe</code> process</td></tr>
+  <tr><td>10</td><td><code>dotnet build</code> is clean with zero errors and zero warnings</td></tr>
+  <tr><td>11</td><td>Clean Architecture dependency rule not violated — <code>SRW.Core</code> has no project reference to <code>SRW.Infrastructure</code></td></tr>
+  <tr><td>12</td><td>AKS namespace teardown tested: deleting a workspace tears down the K8s namespace and CSI Secret</td></tr>
+</table>
+
+<div class="doc-footer">
+  Secure Research Workspace — Implementation Plan &amp; Architecture &nbsp;·&nbsp; v1.0 &nbsp;·&nbsp; June 2026 &nbsp;·&nbsp; Engineering
+</div>
+
+</body>
+</html>

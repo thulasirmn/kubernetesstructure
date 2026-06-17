@@ -325,7 +325,7 @@ public sealed class KubernetesOrchestrator : IKubernetesOrchestrator
         }
     }
 
-    public async Task StopSessionAsync(string ns, string deploymentName, string serviceName, CancellationToken ct = default)
+    public async Task StopSessionAsync(string ns, string deploymentName, string serviceName, Guid sessionId, CancellationToken ct = default)
     {
         async Task SwallowNotFound(Func<Task> action)
         {

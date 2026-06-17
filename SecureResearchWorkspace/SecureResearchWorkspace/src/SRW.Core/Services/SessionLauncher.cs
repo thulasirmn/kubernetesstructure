@@ -8,29 +8,36 @@ using SRW.Domain.Entities;
 namespace SRW.Core.Services;
 
 /// <summary>
-/// Launches a per-user, per-application Kubernetes session (deployment + service + ingress).
-/// Every pod in the workspace mounts the same File Share at the same root path —
-/// users share files at the workspace level (no per-user isolation in storage).
+/// Handles session launch. LaunchAsync is synchronous-only:
+/// it validates inputs, persists a Starting session record, and delegates the
+/// actual Terraform provisioning to ISessionProvisioningQueue so the HTTP
+/// response returns immediately (202 Accepted). Callers poll
+/// GET /sessions/{id} to observe status transitions via SessionStatusPoller.
+/// Session stop is handled by SessionStopConsumer (via Service Bus).
 /// </summary>
 public sealed class SessionLauncher
 {
     private readonly IWorkspaceRepository _workspaceRepo;
     private readonly ISessionRepository _sessionRepo;
-    private readonly IKubernetesOrchestrator _k8s;
+    private readonly ISessionProvisioningQueue _provisioningQueue;
     private readonly ILogger<SessionLauncher> _log;
 
     public SessionLauncher(
         IWorkspaceRepository workspaceRepo,
         ISessionRepository sessionRepo,
-        IKubernetesOrchestrator k8s,
+        ISessionProvisioningQueue provisioningQueue,
         ILogger<SessionLauncher> log)
     {
-        _workspaceRepo = workspaceRepo;
-        _sessionRepo = sessionRepo;
-        _k8s = k8s;
-        _log = log;
+        _workspaceRepo     = workspaceRepo;
+        _sessionRepo       = sessionRepo;
+        _provisioningQueue = provisioningQueue;
+        _log               = log;
     }
 
+    /// <summary>
+    /// Validates, creates a Starting session in the DB, enqueues provisioning,
+    /// and returns immediately. Terraform runs in the background.
+    /// </summary>
     public async Task<UserSession> LaunchAsync(
         Guid workspaceId,
         Guid applicationId,
@@ -49,7 +56,7 @@ public sealed class SessionLauncher
         if (application.WorkspaceId != workspace.Id)
             throw new InvalidOperationException("Application does not belong to this workspace");
 
-        // If the user already has a running session for this app, return it (idempotent launch).
+        // Idempotent — return existing session if already in-flight or running.
         var existing = await _sessionRepo.GetActiveAsync(workspaceId, applicationId, userId, ct);
         if (existing is not null && existing.Status is SessionStatus.Running or SessionStatus.Starting)
         {
@@ -58,47 +65,15 @@ public sealed class SessionLauncher
         }
 
         var session = UserSession.Create(workspaceId, applicationId, userId);
+        session.Status = SessionStatus.Starting;
         await _sessionRepo.AddAsync(session, ct);
 
-        try
-        {
-            session.Status = SessionStatus.Starting;
-            var result = await _k8s.LaunchSessionAsync(workspace, application, session, ct);
+        _provisioningQueue.EnqueueLaunch(session.Id, workspaceId, applicationId, userId);
 
-            session.AccessUrl = result.AccessUrl;
-            session.StartedAtUtc = DateTime.UtcNow;
-            await _sessionRepo.UpdateAsync(session, ct);
+        _log.LogInformation(
+            "Session {SessionId} queued for provisioning: app={App} user={User}",
+            session.Id, application.Name, userId);
 
-            _log.LogInformation(
-                "Session {SessionId} launched: app={App} user={User} url={Url}",
-                session.Id, application.Name, userId, result.AccessUrl);
-
-            return session;
-        }
-        catch (Exception ex)
-        {
-            _log.LogError(ex, "Session {SessionId} launch failed", session.Id);
-            session.Status = SessionStatus.Failed;
-            await _sessionRepo.UpdateAsync(session, ct);
-            throw;
-        }
-    }
-
-    public async Task StopAsync(Guid sessionId, CancellationToken ct = default)
-    {
-        var session = await _sessionRepo.GetByIdAsync(sessionId, ct)
-            ?? throw new InvalidOperationException($"Session {sessionId} not found");
-
-        var workspace = await _workspaceRepo.GetByIdAsync(session.WorkspaceId, ct)
-            ?? throw new InvalidOperationException("Workspace gone");
-
-        session.Status = SessionStatus.Stopping;
-        await _sessionRepo.UpdateAsync(session, ct);
-
-        await _k8s.StopSessionAsync(workspace.K8sNamespace, session.DeploymentName, session.ServiceName, ct);
-
-        session.Status = SessionStatus.Stopped;
-        session.StoppedAtUtc = DateTime.UtcNow;
-        await _sessionRepo.UpdateAsync(session, ct);
+        return session;
     }
 }

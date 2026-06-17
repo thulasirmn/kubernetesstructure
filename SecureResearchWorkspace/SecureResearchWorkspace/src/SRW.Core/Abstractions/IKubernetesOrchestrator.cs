@@ -1,3 +1,4 @@
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using SRW.Domain.Entities;
@@ -38,6 +39,7 @@ public interface IKubernetesOrchestrator
         string k8sNamespace,
         string deploymentName,
         string serviceName,
+        Guid sessionId,
         CancellationToken ct = default);
 
     Task DeleteWorkspaceNamespaceAsync(string k8sNamespace, CancellationToken ct = default);

@@ -103,7 +103,7 @@ public sealed class SessionStopConsumer : BackgroundService
 
             var ws = await workspaceRepo.GetByIdAsync(msg.WorkspaceId, args.CancellationToken);
             if (ws is not null)
-                await k8s.StopSessionAsync(ws.K8sNamespace, session.DeploymentName, session.ServiceName, args.CancellationToken);
+                await k8s.StopSessionAsync(ws.K8sNamespace, session.DeploymentName, session.ServiceName, session.Id, args.CancellationToken);
 
             session.Status       = SessionStatus.Stopped;
             session.StoppedAtUtc = DateTime.UtcNow;

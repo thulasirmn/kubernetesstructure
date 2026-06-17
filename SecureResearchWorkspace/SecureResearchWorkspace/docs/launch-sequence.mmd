@@ -1,0 +1,35 @@
+%%{init: {'theme':'base','themeVariables':{'fontSize':'15px','fontFamily':'Segoe UI, Arial'}}}%%
+sequenceDiagram
+    autonumber
+    actor U as Researcher
+    participant IN as ingress-nginx
+    participant API as SRW.Api
+    participant DB as Cosmos DB sessions
+    participant K8 as Kubernetes API
+    participant POD as Session Pod
+    participant ST as Azure File Share
+    participant BG as StatusPoller
+
+    U->>IN: POST /api/workspaces/id/sessions with applicationId
+    IN->>API: forward request
+    API->>DB: GetActive for workspace app user
+    alt session already Running or Starting
+        DB-->>API: existing session
+        API-->>U: 200 OK existing AccessUrl (idempotent)
+    else new session
+        API->>DB: create session doc, status Starting
+        API->>K8: create Deployment with CSI file mount
+        API->>K8: create Service ClusterIP
+        API->>K8: create Ingress path /s/slug/
+        K8->>POD: schedule pod on node
+        POD->>ST: SMB mount workspace-share via azure-storage-creds
+        API-->>U: 200 OK AccessUrl https://domain/s/slug/
+        loop every 15 seconds
+            BG->>K8: read ready replicas
+            K8-->>BG: ready replicas at least 1
+            BG->>DB: status Running, stamp StartedAtUtc
+        end
+    end
+    U->>IN: open AccessUrl
+    IN->>POD: route /s/slug/ to ClusterIP to pod
+    POD-->>U: app UI Jupyter RStudio DBGate FDSA

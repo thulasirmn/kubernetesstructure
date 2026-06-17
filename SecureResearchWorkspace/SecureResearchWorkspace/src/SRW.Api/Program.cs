@@ -1,20 +1,19 @@
 using SRW.Core.Abstractions;
 using SRW.Core.Services;
-using SRW.Infrastructure.Azure;
 using SRW.Infrastructure.BackgroundJobs;
-using SRW.Infrastructure.Kubernetes;
 using SRW.Infrastructure.Messaging;
 using SRW.Infrastructure.Persistence;
+using SRW.Infrastructure.Terraform;
 using SRW.Api.Endpoints;
 using SRW.Api.Auth;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // ── Configuration ─────────────────────────────────────────────────────────────
-builder.Services.Configure<AzureOptions>(builder.Configuration.GetSection("Azure"));
 builder.Services.Configure<CosmosDbOptions>(builder.Configuration.GetSection("Cosmos"));
 builder.Services.Configure<ServiceBusOptions>(builder.Configuration.GetSection("ServiceBus"));
 builder.Services.Configure<BackgroundJobOptions>(builder.Configuration.GetSection("BackgroundJobs"));
+builder.Services.Configure<TerraformOptions>(builder.Configuration.GetSection("Terraform"));
 
 // ── Persistence ───────────────────────────────────────────────────────────────
 builder.Services.AddSingleton<CosmosContainerProvider>();
@@ -25,8 +24,10 @@ builder.Services.AddScoped<ISessionRepository, SessionRepository>();
 builder.Services.AddScoped<IWorkspaceSecretStore, WorkspaceSecretStore>();
 
 // ── Infrastructure adapters ───────────────────────────────────────────────────
-builder.Services.AddSingleton<IAzureStorageProvisioner, AzureStorageProvisioner>();
-builder.Services.AddSingleton<IKubernetesOrchestrator, KubernetesOrchestrator>();
+builder.Services.AddSingleton<TerraformRunner>();
+builder.Services.AddSingleton<TerraformOrchestrator>();
+builder.Services.AddSingleton<IAzureStorageProvisioner>(sp => sp.GetRequiredService<TerraformOrchestrator>());
+builder.Services.AddSingleton<IKubernetesOrchestrator>(sp => sp.GetRequiredService<TerraformOrchestrator>());
 
 // ── Messaging ─────────────────────────────────────────────────────────────────
 builder.Services.AddSingleton<IServiceBusPublisher, ServiceBusSenderAdapter>();
@@ -43,6 +44,13 @@ builder.Services.AddHostedService<IdleSessionReaper>();
 builder.Services.AddHostedService<SessionStopConsumer>();
 builder.Services.AddHostedService<OrphanResourceCleaner>();
 builder.Services.AddHostedService<WorkspaceCleanupConsumer>();
+
+// SessionLaunchWorker is both the ISessionProvisioningQueue (enqueue side) and a
+// BackgroundService (dequeue + Terraform side). Register as singleton so the same
+// channel instance is shared, then hook it into the hosted-service pipeline.
+builder.Services.AddSingleton<SessionLaunchWorker>();
+builder.Services.AddSingleton<ISessionProvisioningQueue>(sp => sp.GetRequiredService<SessionLaunchWorker>());
+builder.Services.AddHostedService(sp => sp.GetRequiredService<SessionLaunchWorker>());
 
 // ── Auth (placeholder — wire Keycloak later via OIDC) ─────────────────────────
 builder.Services.AddCurrentUserAccessor();

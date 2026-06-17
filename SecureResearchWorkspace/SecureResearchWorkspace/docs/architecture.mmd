@@ -1,0 +1,60 @@
+%%{init: {'theme':'base','themeVariables':{'fontSize':'15px','fontFamily':'Segoe UI, Arial'}}}%%
+flowchart LR
+  classDef user fill:#fdedec,stroke:#cb4335,color:#922b21,stroke-width:1px;
+  classDef plat fill:#eaf2fb,stroke:#2E75B6,color:#1F4E78,stroke-width:1px;
+  classDef ws   fill:#e9f7ef,stroke:#1e8449,color:#145a32,stroke-width:1px;
+  classDef data fill:#fef9e7,stroke:#b7950b,color:#7d6608,stroke-width:1px;
+  classDef edge fill:#f4ecf7,stroke:#7d3c98,color:#4a235a,stroke-width:1px;
+
+  U["Researcher<br/><i>X-User-Id = email</i>"]:::user
+
+  subgraph AZ["Azure Subscription &nbsp;·&nbsp; Resource Group: srw-platform-rg"]
+    direction LR
+
+    subgraph AKS["AKS Cluster (srw-aks) — 1 shared cluster"]
+      direction TB
+
+      ING["ingress-nginx controller<br/>routes /s/&lt;slug&gt;/ and /api"]:::edge
+
+      subgraph PLAT["namespace: srw-platform"]
+        direction TB
+        API["<b>SRW.Api</b> (2 replicas)<br/>Minimal API + DI composition"]:::plat
+        BG["<b>Background workers</b><br/>ProvisioningConsumer · SessionStopConsumer<br/>StatusPoller(15s) · IdleReaper(8h) · OrphanCleaner(24h)"]:::plat
+        SAcc["ServiceAccount: srw-api<br/><i>ClusterRole RBAC → manage ns/deploy/svc/ingress</i>"]:::plat
+      end
+
+      subgraph WS["namespace: ws-&lt;name&gt;-&lt;id&gt; &nbsp;(one per workspace)"]
+        direction TB
+        SEC["Secret: azure-storage-creds"]:::ws
+        NP["NetworkPolicy: default-deny"]:::ws
+        DEP["<b>Deployment: sess-&lt;id&gt;</b> (1 pod / user / app)<br/>image: Jupyter · RStudio · DBGate · FDSA<br/>req 0.5 vCPU / 1Gi · limit 2 vCPU / 4Gi"]:::ws
+        SVC["Service: svc-&lt;id&gt; (ClusterIP)"]:::ws
+        WIN["Ingress rule: /s/&lt;slug&gt;/"]:::ws
+      end
+    end
+
+    COS[("<b>Cosmos DB</b> (db: srw)<br/>workspaces · sessions · secrets")]:::data
+    SB{{"<b>Service Bus</b> (3 queues)<br/>provision · session-stop · cleanup"}}:::data
+    ST[("<b>Storage Account</b> srw&lt;guid&gt; — 1 / workspace<br/>File Share: workspace-share (SMB)")]:::data
+  end
+
+  %% ---- Session launch flow (solid, numbered) ----
+  U -->|"1&nbsp; POST /api/workspaces/{id}/sessions"| ING
+  ING -->|"2"| API
+  API -->|"3&nbsp; idempotency check + write session doc"| COS
+  API -->|"4&nbsp; create Deployment + Service + Ingress"| DEP
+  SAcc -. authorizes .- API
+  DEP -->|"5&nbsp; SMB mount via file.csi.azure.com"| ST
+  DEP -. reads .- SEC
+  BG -->|"6&nbsp; poll ready replicas → status Running"| DEP
+  API -->|"7&nbsp; return AccessUrl https://.../s/&lt;slug&gt;/"| U
+
+  %% ---- Runtime traffic (thick) ----
+  U ==>|"8&nbsp; open app URL"| ING
+  ING ==> SVC ==> DEP
+
+  %% ---- Async provisioning (dotted) ----
+  API -. "create workspace → enqueue" .-> SB
+  SB -. consumed by .-> BG
+  BG -. "provision storage + namespace + secret + netpol" .-> ST
+  BG -. namespace/secret/netpol .-> SEC
