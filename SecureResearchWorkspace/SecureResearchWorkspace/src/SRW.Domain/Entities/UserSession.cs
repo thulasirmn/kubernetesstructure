@@ -31,22 +31,20 @@ public class UserSession
 
     public static UserSession Create(Guid workspaceId, Guid applicationId, string userId)
     {
-        var id = Guid.NewGuid();
-        var slug = id.ToString("N")[..10];
+        var id     = Guid.NewGuid();
+        var hex8   = id.ToString("N")[..8];   // first 8 hex chars, no dashes
+        var slug10 = id.ToString("N")[..10];  // for the ingress path
         return new UserSession
         {
-            Id = id,
-            WorkspaceId = workspaceId,
-            ApplicationId = applicationId,
-            UserId = userId,
-            Status = SessionStatus.Pending,
-            // DeploymentName and ServiceName are left empty here.
-            // Terraform is the source of truth for these names.
-            // SessionLaunchWorker writes them back after terraform apply completes.
-            DeploymentName = string.Empty,
-            ServiceName = string.Empty,
-            IngressPath = $"/s/{slug}",
-            CreatedAtUtc = DateTime.UtcNow,
+            Id             = id,
+            WorkspaceId    = workspaceId,
+            ApplicationId  = applicationId,
+            UserId         = userId,
+            Status         = SessionStatus.Pending,
+            DeploymentName = $"sess-{hex8}",
+            ServiceName    = $"svc-{hex8}",
+            IngressPath    = $"/s/{slug10}",
+            CreatedAtUtc   = DateTime.UtcNow,
             LastActivityUtc = DateTime.UtcNow
         };
     }

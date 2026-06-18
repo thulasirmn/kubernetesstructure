@@ -1,0 +1,44 @@
+{{- $isIp := regexMatch "^[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+$" .Values.ingressDomain -}}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ .Values.deploymentName }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    srw.io/session-id: {{ .Values.sessionId | quote }}
+    srw.io/workspace-id: {{ .Values.workspaceId | quote }}
+    srw.io/app: {{ .Values.appType | quote }}
+    app: {{ .Values.deploymentName | quote }}
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-http-version: "1.1"
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    {{- if eq .Values.appType "rstudio" }}
+    nginx.ingress.kubernetes.io/rewrite-target: "/$2"
+    {{- end }}
+spec:
+  ingressClassName: nginx
+  rules:
+    {{- if $isIp }}
+    - http:
+        paths:
+          - path: {{ .Values.ingressPath }}(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: {{ .Values.serviceName }}
+                port:
+                  number: 80
+    {{- else }}
+    - host: {{ .Values.ingressDomain }}
+      http:
+        paths:
+          - path: {{ .Values.ingressPath }}(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: {{ .Values.serviceName }}
+                port:
+                  number: 80
+    {{- end }}

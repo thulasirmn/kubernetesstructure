@@ -31,6 +31,11 @@
     "WorkspaceCleanupQueue": "srw-workspace-cleanup"
   },
 
+  "Helm": {
+    "HelmBinaryPath": "helm",
+    "SessionChartPath": "<absolute-or-relative-path-to>/charts/session"
+  },
+
   "BackgroundJobs": {
     "SessionStatusPollSeconds": 15,
     "IdleReaperIntervalMinutes": 10,

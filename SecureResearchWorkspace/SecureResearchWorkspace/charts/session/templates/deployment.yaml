@@ -1,0 +1,87 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.deploymentName }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    srw.io/session-id: {{ .Values.sessionId | quote }}
+    srw.io/workspace-id: {{ .Values.workspaceId | quote }}
+    srw.io/user-id: {{ .Values.sanitizedUserId | quote }}
+    srw.io/app: {{ .Values.appType | quote }}
+    app: {{ .Values.deploymentName | quote }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Values.deploymentName | quote }}
+  template:
+    metadata:
+      labels:
+        srw.io/session-id: {{ .Values.sessionId | quote }}
+        srw.io/workspace-id: {{ .Values.workspaceId | quote }}
+        srw.io/user-id: {{ .Values.sanitizedUserId | quote }}
+        srw.io/app: {{ .Values.appType | quote }}
+        app: {{ .Values.deploymentName | quote }}
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - name: app
+          image: {{ .Values.containerImage | quote }}
+          imagePullPolicy: IfNotPresent
+          {{- if eq .Values.appType "rstudio" }}
+          command:
+            - /bin/bash
+            - -c
+            - |
+              printf '%s\n' 'www-root-path={{ .Values.ingressPath }}' >> /etc/rstudio/rserver.conf 2>/dev/null || true
+              if [ -f /etc/rstudio/disable_auth_rserver.conf ]; then
+                printf '%s\n' 'www-root-path={{ .Values.ingressPath }}' >> /etc/rstudio/disable_auth_rserver.conf
+              fi
+              exec /init
+          {{- else if .Values.command }}
+          command:
+            {{- range .Values.command }}
+            - {{ . | quote }}
+            {{- end }}
+          {{- else if eq .Values.appType "jupyter" }}
+          command:
+            - start-notebook.sh
+            - "--NotebookApp.token="
+            - "--NotebookApp.password="
+            - {{ printf "--NotebookApp.base_url=%s/" .Values.ingressPath | quote }}
+          {{- end }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.containerPort }}
+          {{- if .Values.env }}
+          env:
+            {{- range $k, $v := .Values.env }}
+            - name: {{ $k | quote }}
+              value: {{ $v | quote }}
+            {{- end }}
+          {{- end }}
+          resources:
+            requests:
+              cpu: {{ .Values.cpuRequest | quote }}
+              memory: {{ .Values.memoryRequest | quote }}
+            limits:
+              cpu: {{ .Values.cpuLimit | quote }}
+              memory: {{ .Values.memoryLimit | quote }}
+          volumeMounts:
+            - name: workspace-share
+              mountPath: {{ .Values.mountPath | quote }}
+              subPath: {{ .Values.sanitizedUserId | quote }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false
+            runAsNonRoot: false
+      volumes:
+        - name: workspace-share
+          csi:
+            driver: file.csi.azure.com
+            readOnly: false
+            volumeAttributes:
+              secretName: azure-storage-creds
+              secretNamespace: {{ .Release.Namespace }}
+              shareName: {{ .Values.fileShareName | quote }}
+              mountOptions: "dir_mode=0777,file_mode=0777,uid=1000,gid=1000,mfsymlinks,cache=strict"

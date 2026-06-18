@@ -1,0 +1,26 @@
+# Default values — all are overridden at install time by KubernetesOrchestrator.
+sessionId: ""
+workspaceId: ""
+userId: ""
+sanitizedUserId: ""
+appType: "custom"           # jupyter | rstudio | custom
+deploymentName: ""          # sess-<8-char-hex>
+serviceName: ""             # svc-<8-char-hex>
+ingressPath: ""             # /s/<10-char-slug>
+ingressDomain: ""           # DNS name or raw IP; IP triggers http:// URLs and no host rule
+
+containerImage: ""
+containerPort: 8888
+cpuRequest: "100m"
+cpuLimit: "2"
+memoryRequest: "1Gi"
+memoryLimit: "4Gi"
+mountPath: "/workspace"
+fileShareName: "workspace-share"
+
+# Environment variables as a flat key/value map.
+env: {}
+
+# Override container command. If empty, app-type defaults are applied (see deployment.yaml).
+# Use __BASE_URL__ as a token — it is replaced with <ingressPath>/ at install time.
+command: []

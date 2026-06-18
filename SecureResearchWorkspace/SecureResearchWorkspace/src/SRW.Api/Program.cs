@@ -1,9 +1,11 @@
 using SRW.Core.Abstractions;
 using SRW.Core.Services;
+using SRW.Infrastructure.Azure;
 using SRW.Infrastructure.BackgroundJobs;
+using SRW.Infrastructure.Helm;
+using SRW.Infrastructure.Kubernetes;
 using SRW.Infrastructure.Messaging;
 using SRW.Infrastructure.Persistence;
-using SRW.Infrastructure.Terraform;
 using SRW.Api.Endpoints;
 using SRW.Api.Auth;
 
@@ -13,7 +15,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.Configure<CosmosDbOptions>(builder.Configuration.GetSection("Cosmos"));
 builder.Services.Configure<ServiceBusOptions>(builder.Configuration.GetSection("ServiceBus"));
 builder.Services.Configure<BackgroundJobOptions>(builder.Configuration.GetSection("BackgroundJobs"));
-builder.Services.Configure<TerraformOptions>(builder.Configuration.GetSection("Terraform"));
+builder.Services.Configure<AzureOptions>(builder.Configuration.GetSection("Azure"));
+builder.Services.Configure<HelmOptions>(builder.Configuration.GetSection("Helm"));
 
 // ── Persistence ───────────────────────────────────────────────────────────────
 builder.Services.AddSingleton<CosmosContainerProvider>();
@@ -24,10 +27,14 @@ builder.Services.AddScoped<ISessionRepository, SessionRepository>();
 builder.Services.AddScoped<IWorkspaceSecretStore, WorkspaceSecretStore>();
 
 // ── Infrastructure adapters ───────────────────────────────────────────────────
-builder.Services.AddSingleton<TerraformRunner>();
-builder.Services.AddSingleton<TerraformOrchestrator>();
-builder.Services.AddSingleton<IAzureStorageProvisioner>(sp => sp.GetRequiredService<TerraformOrchestrator>());
-builder.Services.AddSingleton<IKubernetesOrchestrator>(sp => sp.GetRequiredService<TerraformOrchestrator>());
+// Azure SDK: provisions Storage Accounts + File Shares
+builder.Services.AddSingleton<IAzureStorageProvisioner, AzureStorageProvisioner>();
+
+// Helm CLI: installs/uninstalls per-session K8s resources (Deployment, Service, Ingress)
+builder.Services.AddSingleton<HelmRunner>();
+
+// K8s SDK: workspace namespace setup + pod status polling; Helm for session lifecycle
+builder.Services.AddSingleton<IKubernetesOrchestrator, KubernetesOrchestrator>();
 
 // ── Messaging ─────────────────────────────────────────────────────────────────
 builder.Services.AddSingleton<IServiceBusPublisher, ServiceBusSenderAdapter>();
@@ -46,7 +53,7 @@ builder.Services.AddHostedService<OrphanResourceCleaner>();
 builder.Services.AddHostedService<WorkspaceCleanupConsumer>();
 
 // SessionLaunchWorker is both the ISessionProvisioningQueue (enqueue side) and a
-// BackgroundService (dequeue + Terraform side). Register as singleton so the same
+// BackgroundService (dequeue + Helm side). Register as singleton so the same
 // channel instance is shared, then hook it into the hosted-service pipeline.
 builder.Services.AddSingleton<SessionLaunchWorker>();
 builder.Services.AddSingleton<ISessionProvisioningQueue>(sp => sp.GetRequiredService<SessionLaunchWorker>());

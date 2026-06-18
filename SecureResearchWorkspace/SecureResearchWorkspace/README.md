@@ -11,7 +11,6 @@ A multi-tenant research platform on Azure Kubernetes Service (AKS). Each **works
 - [Project Structure](#project-structure)
 - [Key Flows](#key-flows)
 - [Background Services](#background-services)
-- [Terraform Modules](#terraform-modules)
 - [Auth](#auth)
 - [Production Checklist](#production-checklist)
 
@@ -24,7 +23,7 @@ A multi-tenant research platform on Azure Kubernetes Service (AKS). Each **works
 | .NET SDK | 8.x | `dotnet --version` |
 | Azure CLI | any recent | `az --version` — then `az login` |
 | kubectl | any recent | `az aks get-credentials -n srw-aks-dev -g srw-dev-rg` |
-| Terraform CLI | >= 1.5 | `terraform version` |
+| Helm CLI | >= 3.x | `helm version` |
 | HTTPS dev cert | — | `dotnet dev-certs https --trust` |
 
 The API uses `DefaultAzureCredential` throughout — `az login` is sufficient for local dev (no service principal needed).
@@ -49,24 +48,24 @@ Copy-Item src\SRW.Api\appsettings.Development.json.example `
           src\SRW.Api\appsettings.Development.json
 ```
 
-Fill in the required values. See **[NEW_MACHINE_SETUP.md](NEW_MACHINE_SETUP.md)** for RBAC and gotchas, and **[NEW_MACHINE_SETUP_TERRAFORM.md](NEW_MACHINE_SETUP_TERRAFORM.md)** for Service Bus + Terraform config keys with a full template.
+Fill in the required values. See **[NEW_MACHINE_SETUP.md](NEW_MACHINE_SETUP.md)** for RBAC and gotchas, and **[NEW_MACHINE_SETUP_HELM.md](NEW_MACHINE_SETUP_HELM.md)** for the full appsettings template with all sections.
 
 Key sections:
 
 ```json
 {
-  "Cosmos":      { "Endpoint": "...", "AccountKey": "..." },
-  "Azure":       { "SubscriptionId": "...", "AksClusterName": "srw-aks-dev",
-                   "AksResourceGroup": "srw-dev-rg", "IngressDomain": "..." },
-  "ServiceBus":  { "FullyQualifiedNamespace": "srw-servicebus-dev.servicebus.windows.net",
-                   "ConnectionString": "..." },
-  "Terraform":   { "TerraformBinaryPath": "terraform",
-                   "WorkingRootDir": "C:/temp/srw-terraform",
-                   "PluginCacheDir": "C:/temp/terraform-plugins",
-                   "StateStorageAccount": "srwterraformstate", ... },
+  "Cosmos":     { "Endpoint": "...", "AccountKey": "..." },
+  "Azure":      { "SubscriptionId": "...", "AksClusterName": "srw-aks-dev",
+                  "AksResourceGroup": "srw-dev-rg", "IngressDomain": "..." },
+  "ServiceBus": { "FullyQualifiedNamespace": "srw-servicebus-dev.servicebus.windows.net",
+                  "ConnectionString": "..." },
+  "Helm":       { "HelmBinaryPath": "helm",
+                  "SessionChartPath": "C:/absolute/path/to/charts/session" },
   "BackgroundJobs": { "SessionStatusPollSeconds": 15 }
 }
 ```
+
+> **`Helm:SessionChartPath`** — when running `dotnet run --project src/SRW.Api`, the working directory is `src/SRW.Api`, so the default relative path `charts/session` won't resolve. Set this to the **absolute** path of the `charts/session` directory in your local clone.
 
 > No database migrations needed — Cosmos containers are created automatically at startup via `CosmosContainerProvider.InitializeAsync()`.
 
@@ -93,7 +92,9 @@ Then open `http://localhost/s/<slug>/` using the `accessUrl` slug returned by `G
 
 - **Data Protection key ring** — storage keys are encrypted with ASP.NET Core Data Protection. Keys live in `%LOCALAPPDATA%\ASP.NET\DataProtection-Keys` by default. If you point a second machine at the same Cosmos DB, it cannot decrypt storage keys written by the first machine. To share, persist the key ring to Azure Blob + Key Vault.
 - **Port** — `src/SRW.Api/Properties/launchSettings.json` is untracked in git. On a new machine the port may differ or default to 5000/5001 unless you copy that file.
+- **`Helm:SessionChartPath`** — must be an absolute path in `appsettings.Development.json`. The chart directory (`charts/session/`) lives at the repo root, not under `src/SRW.Api`.
 - **AKS node CPU pressure** — the 3-node dev cluster (2 vCPU each) has ~1900m allocatable per node. Each session requests 100m CPU. If pods go `Pending`, run `kubectl describe pod <name> -n <ns>` — `Insufficient cpu` means too many sessions running. Stop idle sessions or `az aks scale --name srw-aks-dev --resource-group srw-dev-rg --node-count 4`.
+- **`resourceGroup` is required** when calling `POST /api/workspaces` — pass the Azure resource group where the workspace storage account should be created (e.g. `srw-dev-rg`).
 
 ---
 
@@ -113,21 +114,23 @@ SecureResearchWorkspace.sln
 │   │   ├── Abstractions/        # IKubernetesOrchestrator, IAzureStorageProvisioner,
 │   │   │                        # IWorkspaceRepository, ISessionRepository, ISessionProvisioningQueue
 │   │   └── Services/
-│   │       ├── SessionLauncher.cs          # Creates session record, enqueues Terraform work
+│   │       ├── SessionLauncher.cs          # Creates session record, enqueues to background worker
 │   │       └── WorkspaceProvisioningService.cs
 │   │
-│   ├── SRW.Infrastructure/      # Azure SDK + Terraform CLI + Kubernetes client
-│   │   ├── Terraform/
-│   │   │   ├── TerraformOrchestrator.cs   # Implements both IAzureStorageProvisioner
-│   │   │   │                              # and IKubernetesOrchestrator via Terraform CLI
-│   │   │   ├── TerraformRunner.cs         # Shells out: init / apply / destroy / output
-│   │   │   └── TerraformOptions.cs
+│   ├── SRW.Infrastructure/      # Azure ARM SDK + Kubernetes client SDK + Helm CLI
+│   │   ├── Azure/
+│   │   │   └── AzureStorageProvisioner.cs  # ARM SDK: creates Storage Account + File Share
+│   │   ├── Kubernetes/
+│   │   │   └── KubernetesOrchestrator.cs   # K8s SDK: Namespace/Secret/NetworkPolicy + Helm for sessions
+│   │   ├── Helm/
+│   │   │   ├── HelmRunner.cs               # Shells out: helm upgrade --install / helm uninstall
+│   │   │   └── HelmOptions.cs              # HelmBinaryPath, SessionChartPath
 │   │   ├── BackgroundJobs/
-│   │   │   ├── SessionLaunchWorker.cs     # Consumes Channel<T>, runs terraform apply
-│   │   │   ├── SessionStatusPoller.cs     # Polls K8s every 15s, syncs Starting→Running
-│   │   │   └── SessionStopConsumer.cs     # Reads Service Bus, runs terraform destroy
-│   │   ├── Messaging/                     # ServiceBusPublisher, ServiceBusClientFactory
-│   │   └── Persistence/                   # Cosmos DB repositories
+│   │   │   ├── SessionLaunchWorker.cs      # Consumes Channel<T>, runs Helm install
+│   │   │   ├── SessionStatusPoller.cs      # Polls K8s every 15s, syncs Starting→Running
+│   │   │   └── SessionStopConsumer.cs      # Reads Service Bus, runs Helm uninstall
+│   │   ├── Messaging/                      # ServiceBusPublisher, ServiceBusClientFactory
+│   │   └── Persistence/                    # Cosmos DB repositories
 │   │
 │   └── SRW.Api/                 # Minimal API endpoints, DI composition root
 │       ├── Endpoints/
@@ -137,17 +140,20 @@ SecureResearchWorkspace.sln
 │       ├── Auth/CurrentUser.cs  # Reads X-User-Id header (Keycloak deferred)
 │       └── Program.cs
 │
-├── terraform/
-│   └── modules/
-│       ├── workspace-storage/   # Azure Storage Account + File Share
-│       ├── workspace-k8s/       # K8s Namespace + azure-storage-creds Secret + NetworkPolicy
-│       └── session/             # K8s Deployment + ClusterIP Service + Ingress rule
+├── charts/
+│   └── session/                 # Helm chart for per-session K8s resources
+│       ├── Chart.yaml
+│       ├── values.yaml
+│       └── templates/
+│           ├── deployment.yaml  # Pod with Azure File CSI volume mount
+│           ├── service.yaml     # ClusterIP service
+│           └── ingress.yaml     # /s/<slug> ingress rule
 │
 ├── k8s/manifests/               # One-time cluster setup (ingress-nginx, RBAC, CSI driver)
 ├── scripts/                     # setup-azure.sh, setup-azure.ps1
-├── docs/                        # Architecture docs, Word implementation plan
+├── docs/                        # Architecture docs, ADO story templates
 ├── NEW_MACHINE_SETUP.md         # Local dev setup, RBAC, gotchas
-└── NEW_MACHINE_SETUP_TERRAFORM.md  # Service Bus + Terraform config keys + full appsettings template
+└── NEW_MACHINE_SETUP_HELM.md    # Helm + Service Bus config keys + full appsettings template
 ```
 
 **Dependency direction:** `Api → Infrastructure → Core → Domain`. Core talks only to abstractions — swapping Azure for another cloud or Keycloak for another IdP is a single-project change.
@@ -158,20 +164,21 @@ SecureResearchWorkspace.sln
 
 ### Workspace Provisioning (`POST /api/workspaces`)
 
+Returns **202 Accepted** immediately. Provisioning runs in `WorkspaceProvisioningConsumer`.
+
 ```
-POST /api/workspaces
+POST /api/workspaces   body: { "name": "...", "resourceGroup": "srw-dev-rg", "quotaGiB": 100 }
   │
   ▼
-WorkspaceProvisioningService.CreateAsync
-  ├── 1. Insert Workspace (Pending) in Cosmos
-  ├── 2. TerraformOrchestrator.ProvisionAsync
-  │       → terraform apply workspace-storage module
-  │       → Creates srw<guid> storage account + "workspace-share" file share
-  │       → Returns storage account name + primary key via terraform output
+WorkspaceProvisioningService.ProvisionAsync  (background)
+  ├── 1. Mark Workspace Provisioning in Cosmos
+  ├── 2. AzureStorageProvisioner.ProvisionAsync  (Azure ARM SDK)
+  │       → Creates srw<guid> Storage Account in the given resource group
+  │       → Creates "workspace-share" File Share
+  │       → Returns primary storage account key
   ├── 3. Encrypt storage key with Data Protection API → store in Cosmos
-  ├── 4. TerraformOrchestrator.EnsureWorkspaceNamespaceAsync
-  │       → terraform apply workspace-k8s module
-  │       → Creates K8s namespace ws-<name>-<id>
+  ├── 4. KubernetesOrchestrator.EnsureWorkspaceNamespaceAsync  (K8s client SDK)
+  │       → Creates Namespace ws-<name>-<id> with srw.io labels
   │       → Creates Secret "azure-storage-creds" (CSI driver reads this to mount the share)
   │       → Creates default-deny NetworkPolicy (only ingress-nginx allowed in)
   └── 5. Mark Workspace Active
@@ -179,28 +186,30 @@ WorkspaceProvisioningService.CreateAsync
 
 ### Session Launch (`POST /api/workspaces/{id}/sessions`)
 
-The HTTP response returns **202 immediately**. Terraform runs in the background.
+Returns **202 Accepted** immediately. Helm runs in the background.
 
 ```
-POST /api/workspaces/{id}/sessions    body: { "applicationId": "<guid>" }
+POST /api/workspaces/{id}/sessions   body: { "applicationId": "<guid>" }
   │
   ▼
 SessionLauncher.LaunchAsync
   ├── 1. Validate workspace (must be Active) + application
   ├── 2. Idempotency: return existing session if status is Starting or Running
-  ├── 3. Create UserSession (Status=Starting, DeploymentName="") → Cosmos
+  ├── 3. Create UserSession (Status=Starting)
+  │       DeploymentName = sess-<first-8-hex-of-sessionId>
+  │       ServiceName    = svc-<first-8-hex-of-sessionId>
+  │       IngressPath    = /s/<first-10-hex-of-sessionId>
   └── 4. Enqueue to Channel<T> → return 202
 
   [background — SessionLaunchWorker]
-  ├── 5. terraform init + apply   (session module)
-  │       → Creates K8s Deployment "sess-<8-char-id>"  (wait_for_rollout=false)
+  ├── 5. helm upgrade --install sess-<id> charts/session -n <namespace> -f <values.json>
+  │       → Creates K8s Deployment (one pod per session)
   │       → Creates ClusterIP Service
   │       → Creates Ingress rule  /s/<slug>(/|$)(.*) → service:80
-  ├── 6. terraform output → reads deployment_name, service_name, access_url
-  ├── 7. Write DeploymentName + ServiceName + AccessUrl back to Cosmos
-  │
+  └── 6. Write AccessUrl back to Cosmos  (DeploymentName/ServiceName already set at step 3)
+
   [background — SessionStatusPoller, every 15 s]
-  └── 8. K8s reports ReadyReplicas >= 1 → update Status=Running in Cosmos
+  └── 7. K8s reports ReadyReplicas >= 1 → update Status=Running in Cosmos
 ```
 
 Poll `GET /api/workspaces/{id}/sessions/{sessionId}` to observe status transitions.
@@ -213,14 +222,14 @@ DELETE /api/workspaces/{id}/sessions/{sessionId}
   └── Publish SessionStopMessage to Service Bus  (202 returned immediately)
 
   [background — SessionStopConsumer]
-  ├── terraform destroy  (session module)
+  ├── helm uninstall sess-<id> -n <namespace>
   │     → Deletes K8s Deployment + Service + Ingress
   └── Mark session Stopped + set StoppedAtUtc → Cosmos
 ```
 
 ### Storage Isolation Per User
 
-The Azure File CSI driver mounts the workspace File Share with `subPath = sanitize(userId)` — each researcher's files live under their own sub-directory within the shared share. Their pod can only read and write their own directory. A `/shared` mount without subPath can be added as a second volume for collaboration.
+The Azure File CSI driver mounts the workspace File Share with `subPath = sanitize(userId)` — each researcher's files live under their own sub-directory within the shared share. Their pod can only read and write their own directory.
 
 ---
 
@@ -228,23 +237,10 @@ The Azure File CSI driver mounts the workspace File Share with `subPath = saniti
 
 | Service | Trigger | What it does |
 |---|---|---|
-| `SessionLaunchWorker` | In-process `Channel<T>` | Runs `terraform apply` for each queued session; writes DeploymentName/AccessUrl back to Cosmos |
-| `SessionStatusPoller` | Timer (15 s) | Reads all Starting/Running sessions from Cosmos; calls K8s for pod readiness; syncs status |
-| `SessionStopConsumer` | Azure Service Bus | Runs `terraform destroy` for stop-requested sessions; marks Stopped in Cosmos |
-
----
-
-## Terraform Modules
-
-State is stored remotely in Azure Blob (`srwterraformstate` storage account, container `srw-tf-state`).
-
-| Module | State key | Resources |
-|---|---|---|
-| `workspace-storage` | `workspaces/<account>-storage.tfstate` | Azure Storage Account, File Share |
-| `workspace-k8s` | `workspaces/<namespace>-k8s.tfstate` | K8s Namespace, `azure-storage-creds` Secret, NetworkPolicy |
-| `session` | `sessions/<sessionId>.tfstate` | K8s Deployment, ClusterIP Service, Ingress |
-
-The session module uses `wait_for_rollout = false` on the Deployment resource. **Do not remove this.** Pod readiness is owned by `SessionStatusPoller`; having Terraform wait on it causes false `Failed` status when nodes are under pressure.
+| `WorkspaceProvisioningConsumer` | Azure Service Bus | Runs ARM SDK + K8s SDK to provision storage + namespace; marks workspace Active or Failed |
+| `SessionLaunchWorker` | In-process `Channel<T>` | Runs `helm upgrade --install` for each queued session; writes AccessUrl back to Cosmos |
+| `SessionStatusPoller` | Timer (15 s) | Reads all Starting/Running sessions; calls K8s for pod readiness; syncs status to Running |
+| `SessionStopConsumer` | Azure Service Bus | Runs `helm uninstall` for stop-requested sessions; marks session Stopped in Cosmos |
 
 ---
 
@@ -279,3 +275,4 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 - [ ] Restrict ingress to corporate IPs via `nginx.ingress.kubernetes.io/whitelist-source-range`
 - [ ] Wire **Azure Monitor** + Container Insights; alert on storage throttling and pod pending duration
 - [ ] Idle-session reaper (`BackgroundJobs:IdleReaperIntervalMinutes` + `IdleSessionThresholdHours` config already wired)
+- [ ] Copy `charts/session/` into the Docker image at build time (required for AKS deployment — `Helm:SessionChartPath` must point inside the container image)
