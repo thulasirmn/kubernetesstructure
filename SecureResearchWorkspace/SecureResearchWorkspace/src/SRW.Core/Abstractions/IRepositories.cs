@@ -26,6 +26,7 @@ public interface ISessionRepository
     Task<List<UserSession>> ListIdleAsync(TimeSpan idleThreshold, CancellationToken ct = default);
     Task AddAsync(UserSession session, CancellationToken ct = default);
     Task UpdateAsync(UserSession session, CancellationToken ct = default);
+    Task TouchAsync(Guid sessionId, Guid workspaceId, CancellationToken ct = default);
 }
 
 /// <summary>

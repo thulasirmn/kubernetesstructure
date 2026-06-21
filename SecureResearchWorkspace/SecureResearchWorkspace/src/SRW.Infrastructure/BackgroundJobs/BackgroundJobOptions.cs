@@ -19,4 +19,7 @@ public sealed class BackgroundJobOptions
 
     /// <summary>Maximum message lock renewal window for long-running provisioning (minutes).</summary>
     public int ProvisioningMaxAutoLockRenewMinutes { get; set; } = 10;
+
+    /// <summary>How often SessionActivityWatcher samples pod network bytes to detect real user activity.</summary>
+    public int ActivityCheckIntervalMinutes { get; set; } = 5;
 }

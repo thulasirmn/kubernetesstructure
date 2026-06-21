@@ -49,6 +49,13 @@ public interface IKubernetesOrchestrator
     /// Used by OrphanResourceCleaner to detect abandoned namespaces.
     /// </summary>
     Task<List<string>> ListManagedNamespacesAsync(CancellationToken ct = default);
+
+    /// <summary>
+    /// Reads cumulative bytes received on eth0 from inside the running pod for the given deployment,
+    /// using the K8s exec API (bypasses NetworkPolicy — traffic goes through the API server).
+    /// Returns null if no running pod is found or the exec fails.
+    /// </summary>
+    Task<long?> GetPodRxBytesAsync(string k8sNamespace, string deploymentName, CancellationToken ct = default);
 }
 
 public record SessionDeploymentResult(string DeploymentName, string ServiceName, string AccessUrl);

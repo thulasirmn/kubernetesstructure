@@ -254,6 +254,43 @@ public sealed class KubernetesOrchestrator : IKubernetesOrchestrator
         await _helm.UninstallAsync(deploymentName, k8sNamespace, ct);
     }
 
+    // ── Pod activity sampling (K8s exec — bypasses NetworkPolicy) ────────────
+
+    public async Task<long?> GetPodRxBytesAsync(
+        string k8sNamespace,
+        string deploymentName,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            var pods = await _client.CoreV1.ListNamespacedPodAsync(
+                k8sNamespace,
+                labelSelector: $"app={deploymentName}",
+                cancellationToken: ct);
+
+            var pod = pods.Items.FirstOrDefault(p => p.Status?.Phase == "Running");
+            if (pod is null) return null;
+
+            var outputBuffer = new MemoryStream();
+            await _client.NamespacedPodExecAsync(
+                pod.Metadata.Name,
+                k8sNamespace,
+                "app",
+                new[] { "cat", "/sys/class/net/eth0/statistics/rx_bytes" },
+                tty: false,
+                async (_, stdout, _) => await stdout.CopyToAsync(outputBuffer, ct),
+                ct);
+
+            var text = Encoding.UTF8.GetString(outputBuffer.ToArray()).Trim();
+            return long.TryParse(text, out var bytes) ? bytes : null;
+        }
+        catch (Exception ex)
+        {
+            _log.LogDebug(ex, "GetPodRxBytesAsync failed for {Deploy} in {Ns}", deploymentName, k8sNamespace);
+            return null;
+        }
+    }
+
     // ── Session status (K8s SDK — reads live pod state, not Helm state) ───────
 
     public async Task<SessionStatus> GetSessionStatusAsync(

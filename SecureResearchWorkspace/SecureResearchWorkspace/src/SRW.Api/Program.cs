@@ -47,6 +47,7 @@ builder.Services.AddScoped<SessionLauncher>();
 // ── Background workers ────────────────────────────────────────────────────────
 builder.Services.AddHostedService<WorkspaceProvisioningConsumer>();
 builder.Services.AddHostedService<SessionStatusPoller>();
+builder.Services.AddHostedService<SessionActivityWatcher>();
 builder.Services.AddHostedService<IdleSessionReaper>();
 builder.Services.AddHostedService<SessionStopConsumer>();
 builder.Services.AddHostedService<OrphanResourceCleaner>();

@@ -417,6 +417,15 @@ public class SessionRepository : ISessionRepository
         await _provider.Sessions.UpsertItemAsync(doc,
             new PartitionKey(doc.WorkspaceId), cancellationToken: ct);
     }
+
+    public async Task TouchAsync(Guid sessionId, Guid workspaceId, CancellationToken ct = default)
+    {
+        await _provider.Sessions.PatchItemAsync<SessionDoc>(
+            sessionId.ToString(),
+            new PartitionKey(workspaceId.ToString()),
+            new[] { PatchOperation.Set("/lastActivityUtc", DateTime.UtcNow) },
+            cancellationToken: ct);
+    }
 }
 
 // ── WorkspaceSecretStore ───────────────────────────────────────────────────────
