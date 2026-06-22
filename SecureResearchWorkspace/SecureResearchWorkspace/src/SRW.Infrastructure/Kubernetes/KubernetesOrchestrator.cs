@@ -177,6 +177,121 @@ public sealed class KubernetesOrchestrator : IKubernetesOrchestrator
         catch (k8s.Autorest.HttpOperationException e) when (e.Response.StatusCode == System.Net.HttpStatusCode.NotFound) { }
     }
 
+    public async Task EnsureBlobCredentialSecretAsync(
+        string k8sNamespace,
+        string secretName,
+        string storageAccountName,
+        string storageAccountKey,
+        CancellationToken ct = default)
+    {
+        var secret = new V1Secret
+        {
+            Metadata = new V1ObjectMeta
+            {
+                Name              = secretName,
+                NamespaceProperty = k8sNamespace
+            },
+            Type = "Opaque",
+            Data = new Dictionary<string, byte[]>
+            {
+                ["azurestorageaccountname"] = Encoding.UTF8.GetBytes(storageAccountName),
+                ["azurestorageaccountkey"]  = Encoding.UTF8.GetBytes(storageAccountKey)
+            }
+        };
+        await UpsertSecretAsync(secret, ct);
+        _log.LogInformation("Blob credential secret {Secret} ready in {Ns}", secretName, k8sNamespace);
+    }
+
+    public async Task DeleteBlobCredentialSecretAsync(string k8sNamespace, string secretName, CancellationToken ct = default)
+    {
+        try
+        {
+            await _client.CoreV1.DeleteNamespacedSecretAsync(secretName, k8sNamespace, cancellationToken: ct);
+            _log.LogInformation("Deleted blob credential secret {Secret} from {Ns}", secretName, k8sNamespace);
+        }
+        catch (k8s.Autorest.HttpOperationException e) when (e.Response.StatusCode == System.Net.HttpStatusCode.NotFound) { }
+    }
+
+    public async Task EnsureBlobPvcAsync(
+        string k8sNamespace,
+        string mountId,
+        string storageAccountName,
+        string containerName,
+        string secretName,
+        CancellationToken ct = default)
+    {
+        var pvName  = $"blob-pv-{mountId}";
+        var pvcName = $"blob-pvc-{mountId}";
+
+        // PV is cluster-scoped. volumeHandle must be unique across the cluster.
+        var pv = new V1PersistentVolume
+        {
+            Metadata = new V1ObjectMeta { Name = pvName },
+            Spec = new V1PersistentVolumeSpec
+            {
+                Capacity         = new Dictionary<string, ResourceQuantity> { ["storage"] = new ResourceQuantity("100Gi") },
+                AccessModes      = new[] { "ReadOnlyMany" },
+                PersistentVolumeReclaimPolicy = "Retain",
+                StorageClassName = "",
+                // "--allow-other" is the blobfuse2 flag that lets non-root users (jovyan uid=1000)
+                // access the FUSE mount. Must use "--allow-other" (flag syntax) not "allow_other"
+                // (bare string) — the CSI proxy passes mountOptions as raw blobfuse2 CLI args, so
+                // a bare word becomes a second positional arg and blobfuse2 rejects it.
+                MountOptions = new[] { "--allow-other" },
+                Csi = new V1CSIPersistentVolumeSource
+                {
+                    Driver       = "blob.csi.azure.com",
+                    VolumeHandle = $"{storageAccountName}#{containerName}#{mountId}",
+                    VolumeAttributes = new Dictionary<string, string>
+                    {
+                        ["storageAccount"]  = storageAccountName,
+                        ["containerName"]   = containerName,
+                        ["secretName"]      = secretName,
+                        ["secretNamespace"] = k8sNamespace
+                    }
+                }
+            }
+        };
+
+        try { await _client.CoreV1.CreatePersistentVolumeAsync(pv, cancellationToken: ct); }
+        catch (k8s.Autorest.HttpOperationException e) when (e.Response.StatusCode == System.Net.HttpStatusCode.Conflict) { }
+
+        // PVC is namespace-scoped, statically bound to the PV above.
+        var pvc = new V1PersistentVolumeClaim
+        {
+            Metadata = new V1ObjectMeta { Name = pvcName, NamespaceProperty = k8sNamespace },
+            Spec = new V1PersistentVolumeClaimSpec
+            {
+                AccessModes      = new[] { "ReadOnlyMany" },
+                StorageClassName = "",
+                VolumeName       = pvName,
+                Resources        = new V1VolumeResourceRequirements
+                {
+                    Requests = new Dictionary<string, ResourceQuantity> { ["storage"] = new ResourceQuantity("100Gi") }
+                }
+            }
+        };
+
+        try { await _client.CoreV1.CreateNamespacedPersistentVolumeClaimAsync(pvc, k8sNamespace, cancellationToken: ct); }
+        catch (k8s.Autorest.HttpOperationException e) when (e.Response.StatusCode == System.Net.HttpStatusCode.Conflict) { }
+
+        _log.LogInformation("Blob PV/PVC {Pv} ready in {Ns} for {Account}/{Container}", pvName, k8sNamespace, storageAccountName, containerName);
+    }
+
+    public async Task DeleteBlobPvcAsync(string k8sNamespace, string mountId, CancellationToken ct = default)
+    {
+        var pvName  = $"blob-pv-{mountId}";
+        var pvcName = $"blob-pvc-{mountId}";
+
+        try { await _client.CoreV1.DeleteNamespacedPersistentVolumeClaimAsync(pvcName, k8sNamespace, cancellationToken: ct); }
+        catch (k8s.Autorest.HttpOperationException e) when (e.Response.StatusCode == System.Net.HttpStatusCode.NotFound) { }
+
+        try { await _client.CoreV1.DeletePersistentVolumeAsync(pvName, cancellationToken: ct); }
+        catch (k8s.Autorest.HttpOperationException e) when (e.Response.StatusCode == System.Net.HttpStatusCode.NotFound) { }
+
+        _log.LogInformation("Blob PV/PVC {Pv} deleted", pvName);
+    }
+
     public async Task<List<string>> ListManagedNamespacesAsync(CancellationToken ct = default)
     {
         var list = await _client.CoreV1.ListNamespaceAsync(
@@ -225,7 +340,17 @@ public sealed class KubernetesOrchestrator : IKubernetesOrchestrator
             MountPath       = application.MountPath,
             FileShareName   = workspace.FileShareName,
             Env             = ParseEnvDict(application.EnvironmentJson),
-            Command         = BuildCommandList(application, ingressPath)
+            Command         = BuildCommandList(application, ingressPath),
+            BlobMounts      = workspace.BlobMounts.Select(m => new BlobMountHelmEntry
+            {
+                Id                 = m.Id.ToString("N"),
+                StorageAccountName = m.StorageAccountName,
+                ContainerName      = m.ContainerName,
+                // Mount inside the app's working directory so it appears in the file explorer.
+                // e.g. Jupyter: /home/jovyan/work/<containerName>
+                //      RStudio: /home/rstudio/<containerName>
+                MountPath          = $"{application.MountPath}/{m.ContainerName}"
+            }).ToList()
         };
 
         var json = JsonSerializer.Serialize(values, new JsonSerializerOptions
@@ -335,27 +460,46 @@ public sealed class KubernetesOrchestrator : IKubernetesOrchestrator
     }
 
     /// <summary>
-    /// Builds the container command list for custom apps and Jupyter (with __BASE_URL__ substitution).
-    /// Returns an empty list for RStudio — the Helm template injects the www-root-path command.
-    /// Returns an empty list for Jupyter with no CommandJson — the Helm template applies the default.
+    /// Builds the container command list for Jupyter and custom apps.
+    /// RStudio returns empty — the Helm template's rstudio block handles www-root-path injection.
+    /// Jupyter always gets the full command so ServerApp.websocket_url is set (needed for
+    /// JupyterLab 4.x kernel WebSocket URLs to include the base URL path).
     /// </summary>
     private static List<string> BuildCommandList(WorkspaceApplication application, string ingressPath)
     {
         if (application.Type == ApplicationType.RStudio)
             return new();
 
-        if (string.IsNullOrWhiteSpace(application.CommandJson))
-            return new();
-
-        try
+        if (!string.IsNullOrWhiteSpace(application.CommandJson))
         {
-            var arr = JsonSerializer.Deserialize<List<string>>(application.CommandJson) ?? new();
-            var basePath = ingressPath + "/";
-            for (var i = 0; i < arr.Count; i++)
-                arr[i] = arr[i].Replace("__BASE_URL__", basePath);
-            return arr;
+            try
+            {
+                var arr = JsonSerializer.Deserialize<List<string>>(application.CommandJson) ?? new();
+                var basePath = ingressPath + "/";
+                for (var i = 0; i < arr.Count; i++)
+                    arr[i] = arr[i].Replace("__BASE_URL__", basePath);
+                return arr;
+            }
+            catch { return new(); }
         }
-        catch { return new(); }
+
+        if (application.Type == ApplicationType.Jupyter)
+        {
+            // Explicitly build Jupyter command so ServerApp.websocket_url is always set.
+            // Without it, JupyterLab 4.x page_config gets wsUrl="/" and kernel WebSockets
+            // fail to connect — they omit the base URL path prefix entirely.
+            return new List<string>
+            {
+                "start-notebook.sh",
+                "--ServerApp.token=",
+                "--ServerApp.password=",
+                $"--ServerApp.base_url={ingressPath}/",
+                $"--ServerApp.websocket_url={ingressPath}/",
+                $"--NotebookApp.base_url={ingressPath}/"
+            };
+        }
+
+        return new();
     }
 
     private static string SanitizeLabel(string s)
@@ -390,7 +534,16 @@ public sealed class KubernetesOrchestrator : IKubernetesOrchestrator
         public string MemoryLimit     { get; init; } = "";
         public string MountPath       { get; init; } = "";
         public string FileShareName   { get; init; } = "";
-        public Dictionary<string, string> Env     { get; init; } = new();
-        public List<string>               Command { get; init; } = new();
+        public Dictionary<string, string>  Env        { get; init; } = new();
+        public List<string>                Command    { get; init; } = new();
+        public List<BlobMountHelmEntry>    BlobMounts { get; init; } = new();
+    }
+
+    private sealed class BlobMountHelmEntry
+    {
+        public string Id                 { get; init; } = "";
+        public string StorageAccountName { get; init; } = "";
+        public string ContainerName      { get; init; } = "";
+        public string MountPath          { get; init; } = "";
     }
 }

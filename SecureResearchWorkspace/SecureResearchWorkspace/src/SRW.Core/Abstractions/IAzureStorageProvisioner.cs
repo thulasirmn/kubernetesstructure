@@ -21,6 +21,12 @@ public interface IAzureStorageProvisioner
         CancellationToken ct = default);
 
     Task DeleteAsync(string resourceGroup, string storageAccountName, CancellationToken ct = default);
+
+    /// <summary>
+    /// Fetches the primary access key for an existing storage account via ARM.
+    /// Used to create K8s Secrets for blob CSI driver mounts.
+    /// </summary>
+    Task<string> GetStorageKeyAsync(string resourceGroup, string storageAccountName, CancellationToken ct = default);
 }
 
 public record StorageProvisioningResult(

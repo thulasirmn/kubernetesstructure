@@ -25,8 +25,19 @@ file sealed class WorkspaceDoc
     public List<WorkspaceUserDoc> Users { get; set; } = new();
     /// <summary>IDs of catalog applications assigned to this workspace.</summary>
     public List<string> ApplicationIds { get; set; } = new();
+    public List<BlobMountDoc> BlobMounts { get; set; } = new();
     // Denormalized for efficient cross-partition ListForUser queries.
     public List<string> MemberUserIds { get; set; } = new();
+}
+
+file sealed class BlobMountDoc
+{
+    public string Id { get; set; } = default!;
+    public string StorageAccountName { get; set; } = default!;
+    public string ResourceGroup { get; set; } = default!;
+    public string ContainerName { get; set; } = default!;
+    public string MountPath { get; set; } = default!;
+    public DateTime RequestedAtUtc { get; set; }
 }
 
 file sealed class WorkspaceUserDoc
@@ -101,6 +112,15 @@ file static class WorkspaceMapping
         ProvisionedAtUtc   = w.ProvisionedAtUtc,
         Users              = w.Users.Select(u => u.ToDoc()).ToList(),
         ApplicationIds     = w.ApplicationIds.Select(id => id.ToString()).ToList(),
+        BlobMounts         = w.BlobMounts.Select(m => new BlobMountDoc
+        {
+            Id                 = m.Id.ToString(),
+            StorageAccountName = m.StorageAccountName,
+            ResourceGroup      = m.ResourceGroup,
+            ContainerName      = m.ContainerName,
+            MountPath          = m.MountPath,
+            RequestedAtUtc     = m.RequestedAtUtc
+        }).ToList(),
         MemberUserIds      = w.Users.Select(u => u.UserId).ToList()
     };
 
@@ -118,7 +138,10 @@ file static class WorkspaceMapping
             provisionedAtUtc:   d.ProvisionedAtUtc,
             users:              d.Users.Select(u => u.ToDomain()).ToList(),
             applicationIds:     d.ApplicationIds.Select(Guid.Parse).ToList(),
-            quotaInGiB:         d.QuotaInGiB);
+            quotaInGiB:         d.QuotaInGiB,
+            blobMounts:         d.BlobMounts.Select(m => new BlobMountEntry(
+                Guid.Parse(m.Id), m.StorageAccountName, m.ResourceGroup,
+                m.ContainerName, m.MountPath, m.RequestedAtUtc)).ToList());
 
     internal static WorkspaceUserDoc ToDoc(this WorkspaceUser u) => new()
     {
@@ -379,6 +402,21 @@ public class SessionRepository : ISessionRepository
             new PartitionKey(workspaceId.ToString()),
             new[] { PatchOperation.Set("/lastActivityUtc", DateTime.UtcNow) },
             cancellationToken: ct);
+    }
+
+    public async Task<List<UserSession>> ListRunningByWorkspaceAsync(Guid workspaceId, CancellationToken ct = default)
+    {
+        var query = new QueryDefinition(
+            "SELECT * FROM c WHERE c.workspaceId = @wsId AND c.status = @status")
+            .WithParameter("@wsId",   workspaceId.ToString())
+            .WithParameter("@status", SessionStatus.Running.ToString());
+
+        var results = new List<UserSession>();
+        using var iter = _provider.Sessions.GetItemQueryIterator<SessionDoc>(query,
+            requestOptions: new QueryRequestOptions { PartitionKey = new PartitionKey(workspaceId.ToString()) });
+        while (iter.HasMoreResults)
+            results.AddRange((await iter.ReadNextAsync(ct)).Select(d => d.ToDomain()));
+        return results;
     }
 }
 

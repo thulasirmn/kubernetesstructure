@@ -56,6 +56,35 @@ public interface IKubernetesOrchestrator
     /// Returns null if no running pod is found or the exec fails.
     /// </summary>
     Task<long?> GetPodRxBytesAsync(string k8sNamespace, string deploymentName, CancellationToken ct = default);
+
+    /// <summary>
+    /// Creates or replaces a K8s Secret containing blob storage credentials for the CSI driver.
+    /// Secret name follows the pattern blob-creds-{mountId}.
+    /// </summary>
+    Task EnsureBlobCredentialSecretAsync(
+        string k8sNamespace,
+        string secretName,
+        string storageAccountName,
+        string storageAccountKey,
+        CancellationToken ct = default);
+
+    Task DeleteBlobCredentialSecretAsync(string k8sNamespace, string secretName, CancellationToken ct = default);
+
+    /// <summary>
+    /// Creates a PersistentVolume (cluster-scoped) + PersistentVolumeClaim (namespace-scoped)
+    /// for a blob container mount. PV mountOptions include uid=1000,gid=100,allow_other so the
+    /// application user (jovyan/rstudio) can access the blobfuse2 filesystem — not possible
+    /// with inline ephemeral CSI volumes which forbid uid/gid mount options.
+    /// </summary>
+    Task EnsureBlobPvcAsync(
+        string k8sNamespace,
+        string mountId,
+        string storageAccountName,
+        string containerName,
+        string secretName,
+        CancellationToken ct = default);
+
+    Task DeleteBlobPvcAsync(string k8sNamespace, string mountId, CancellationToken ct = default);
 }
 
 public record SessionDeploymentResult(string DeploymentName, string ServiceName, string AccessUrl);

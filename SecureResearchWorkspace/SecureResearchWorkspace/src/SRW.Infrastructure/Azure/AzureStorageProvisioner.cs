@@ -100,6 +100,21 @@ public sealed class AzureStorageProvisioner : IAzureStorageProvisioner
         await account.Value.DeleteAsync(WaitUntil.Completed, cancellationToken: ct);
     }
 
+    public async Task<string> GetStorageKeyAsync(string resourceGroup, string storageAccountName, CancellationToken ct = default)
+    {
+        var subscription = await GetSubscriptionAsync(ct);
+        var rg = await subscription.GetResourceGroupAsync(resourceGroup, ct);
+        var account = await rg.Value.GetStorageAccountAsync(storageAccountName, cancellationToken: ct);
+
+        await foreach (var k in account.Value.GetKeysAsync(cancellationToken: ct))
+        {
+            if (!string.IsNullOrEmpty(k.Value))
+                return k.Value;
+        }
+
+        throw new InvalidOperationException($"Storage account '{storageAccountName}' returned no keys");
+    }
+
     /// <summary>
     /// Returns the configured subscription if SubscriptionId is set, otherwise the credential's default.
     /// In corporate environments where users have access to many subscriptions, the "default" is rarely

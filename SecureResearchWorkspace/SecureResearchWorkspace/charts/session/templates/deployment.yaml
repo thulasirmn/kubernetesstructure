@@ -46,8 +46,10 @@ spec:
           {{- else if eq .Values.appType "jupyter" }}
           command:
             - start-notebook.sh
-            - "--NotebookApp.token="
-            - "--NotebookApp.password="
+            - "--ServerApp.token="
+            - "--ServerApp.password="
+            - {{ printf "--ServerApp.base_url=%s/" .Values.ingressPath | quote }}
+            - {{ printf "--ServerApp.websocket_url=%s/" .Values.ingressPath | quote }}
             - {{ printf "--NotebookApp.base_url=%s/" .Values.ingressPath | quote }}
           {{- end }}
           ports:
@@ -70,7 +72,11 @@ spec:
           volumeMounts:
             - name: workspace-share
               mountPath: {{ .Values.mountPath | quote }}
-              subPath: {{ .Values.sanitizedUserId | quote }}
+            {{- range .Values.blobMounts }}
+            - name: {{ printf "blob-%s" .id | trunc 63 }}
+              mountPath: {{ .mountPath | quote }}
+              readOnly: true
+            {{- end }}
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: false
@@ -85,3 +91,9 @@ spec:
               secretNamespace: {{ .Release.Namespace }}
               shareName: {{ .Values.fileShareName | quote }}
               mountOptions: "dir_mode=0777,file_mode=0777,uid=1000,gid=1000,mfsymlinks,cache=strict"
+        {{- range .Values.blobMounts }}
+        - name: {{ printf "blob-%s" .id | trunc 63 }}
+          persistentVolumeClaim:
+            claimName: {{ printf "blob-pvc-%s" .id | trunc 63 }}
+            readOnly: true
+        {{- end }}

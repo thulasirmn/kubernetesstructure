@@ -33,6 +33,9 @@ public class Workspace
     /// <summary>IDs of catalog applications assigned to this workspace.</summary>
     public List<Guid> ApplicationIds { get; private set; } = new();
 
+    /// <summary>Blob containers mounted read-only into sessions launched from this workspace.</summary>
+    public List<BlobMountEntry> BlobMounts { get; private set; } = new();
+
     private Workspace() { }
 
     public long QuotaInGiB { get; private set; } = 100;
@@ -75,7 +78,8 @@ public class Workspace
         string resourceGroup, string storageAccountName, string fileShareName,
         string k8sNamespace, DateTime createdAtUtc, DateTime? provisionedAtUtc,
         List<WorkspaceUser> users, List<Guid> applicationIds,
-        long quotaInGiB = 100) =>
+        long quotaInGiB = 100,
+        List<BlobMountEntry>? blobMounts = null) =>
         new()
         {
             Id = id,
@@ -90,7 +94,8 @@ public class Workspace
             ProvisionedAtUtc = provisionedAtUtc,
             Users = users,
             ApplicationIds = applicationIds,
-            QuotaInGiB = quotaInGiB
+            QuotaInGiB = quotaInGiB,
+            BlobMounts = blobMounts ?? new()
         };
 
     public void AddUser(string userId, string displayName, WorkspaceRole role)
@@ -116,7 +121,30 @@ public class Workspace
     }
 
     public void UnassignApplication(Guid appId) => ApplicationIds.Remove(appId);
+
+    public BlobMountEntry AddBlobMount(string storageAccountName, string resourceGroup, string containerName, string mountPath)
+    {
+        var entry = new BlobMountEntry(Guid.NewGuid(), storageAccountName, resourceGroup, containerName, mountPath, DateTime.UtcNow);
+        BlobMounts.Add(entry);
+        return entry;
+    }
+
+    public bool RemoveBlobMount(Guid mountId)
+    {
+        var idx = BlobMounts.FindIndex(m => m.Id == mountId);
+        if (idx < 0) return false;
+        BlobMounts.RemoveAt(idx);
+        return true;
+    }
 }
 
 public enum WorkspaceStatus { Pending, Provisioning, Active, Failed, Deleting }
 public enum WorkspaceRole { Admin, Researcher, Viewer }
+
+public record BlobMountEntry(
+    Guid     Id,
+    string   StorageAccountName,
+    string   ResourceGroup,
+    string   ContainerName,
+    string   MountPath,
+    DateTime RequestedAtUtc);

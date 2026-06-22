@@ -24,3 +24,8 @@ env: {}
 # Override container command. If empty, app-type defaults are applied (see deployment.yaml).
 # Use __BASE_URL__ as a token — it is replaced with <ingressPath>/ at install time.
 command: []
+
+# Read-only blob container mounts. Each entry is injected at session launch time by KubernetesOrchestrator.
+# Schema: { id, storageAccountName, containerName, mountPath }
+# The CSI driver authenticates using a Secret named blob-creds-{id} in the workspace namespace.
+blobMounts: []
