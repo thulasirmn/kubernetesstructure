@@ -17,19 +17,22 @@ namespace SRW.Core.Services;
 /// </summary>
 public sealed class SessionLauncher
 {
-    private readonly IWorkspaceRepository _workspaceRepo;
-    private readonly ISessionRepository _sessionRepo;
+    private readonly IWorkspaceRepository    _workspaceRepo;
+    private readonly ISessionRepository      _sessionRepo;
+    private readonly IApplicationRepository  _appRepo;
     private readonly ISessionProvisioningQueue _provisioningQueue;
     private readonly ILogger<SessionLauncher> _log;
 
     public SessionLauncher(
         IWorkspaceRepository workspaceRepo,
         ISessionRepository sessionRepo,
+        IApplicationRepository appRepo,
         ISessionProvisioningQueue provisioningQueue,
         ILogger<SessionLauncher> log)
     {
         _workspaceRepo     = workspaceRepo;
         _sessionRepo       = sessionRepo;
+        _appRepo           = appRepo;
         _provisioningQueue = provisioningQueue;
         _log               = log;
     }
@@ -50,11 +53,15 @@ public sealed class SessionLauncher
         if (workspace.Status != WorkspaceStatus.Active)
             throw new InvalidOperationException($"Workspace is not Active (status={workspace.Status})");
 
-        var application = await _workspaceRepo.GetApplicationAsync(applicationId, ct)
-            ?? throw new InvalidOperationException($"Application {applicationId} not found");
+        if (!workspace.ApplicationIds.Contains(applicationId))
+            throw new InvalidOperationException(
+                $"Application {applicationId} is not assigned to workspace {workspaceId}");
 
-        if (application.WorkspaceId != workspace.Id)
-            throw new InvalidOperationException("Application does not belong to this workspace");
+        var application = await _appRepo.GetByIdAsync(applicationId, ct)
+            ?? throw new InvalidOperationException($"Application {applicationId} not found in catalog");
+
+        if (!application.Enabled)
+            throw new InvalidOperationException($"Application {applicationId} has been disabled");
 
         // Idempotent — return existing session if already in-flight or running.
         var existing = await _sessionRepo.GetActiveAsync(workspaceId, applicationId, userId, ct);

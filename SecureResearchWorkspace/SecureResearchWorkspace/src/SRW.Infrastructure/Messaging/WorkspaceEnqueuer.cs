@@ -40,29 +40,8 @@ public sealed class WorkspaceEnqueuer : IWorkspaceEnqueuer
             request.ResourceGroup,
             request.QuotaInGiB);
 
-        // Seed default application catalog.
-        workspace.Applications.Add(new WorkspaceApplication
-        {
-            Id             = Guid.NewGuid(),
-            WorkspaceId    = workspace.Id,
-            Name           = "Jupyter Notebook",
-            Type           = ApplicationType.Jupyter,
-            ContainerImage = "jupyter/scipy-notebook:latest",
-            ContainerPort  = 8888,
-            MountPath      = "/home/jovyan/work",
-            CommandJson    = """["start-notebook.sh","--NotebookApp.token=''","--NotebookApp.password=''","--NotebookApp.base_url=__BASE_URL__"]"""
-        });
-        workspace.Applications.Add(new WorkspaceApplication
-        {
-            Id              = Guid.NewGuid(),
-            WorkspaceId     = workspace.Id,
-            Name            = "RStudio Server",
-            Type            = ApplicationType.RStudio,
-            ContainerImage  = "rocker/rstudio:latest",
-            ContainerPort   = 8787,
-            MountPath       = "/home/rstudio/work",
-            EnvironmentJson = """{"DISABLE_AUTH":"true","ROOT":"true"}"""
-        });
+        // Applications are assigned from the global catalog via POST /api/applications/{id}/assign.
+        // New workspaces start with an empty ApplicationIds list.
 
         workspace.AddUser(creatorUserId, creatorDisplayName, WorkspaceRole.Admin);
 

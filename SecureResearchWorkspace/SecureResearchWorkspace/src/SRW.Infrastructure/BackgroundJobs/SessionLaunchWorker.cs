@@ -57,6 +57,7 @@ public sealed class SessionLaunchWorker : BackgroundService, ISessionProvisionin
         await using var scope = _scopeFactory.CreateAsyncScope();
         var workspaceRepo = scope.ServiceProvider.GetRequiredService<IWorkspaceRepository>();
         var sessionRepo   = scope.ServiceProvider.GetRequiredService<ISessionRepository>();
+        var appRepo       = scope.ServiceProvider.GetRequiredService<IApplicationRepository>();
         var k8s           = scope.ServiceProvider.GetRequiredService<IKubernetesOrchestrator>();
 
         var session = await sessionRepo.GetByIdAsync(item.SessionId, ct);
@@ -66,8 +67,8 @@ public sealed class SessionLaunchWorker : BackgroundService, ISessionProvisionin
             return;
         }
 
-        var workspace = await workspaceRepo.GetByIdAsync(item.WorkspaceId, ct);
-        var application = await workspaceRepo.GetApplicationAsync(item.ApplicationId, ct);
+        var workspace   = await workspaceRepo.GetByIdAsync(item.WorkspaceId, ct);
+        var application = await appRepo.GetByIdAsync(item.ApplicationId, ct);
 
         if (workspace is null || application is null)
         {

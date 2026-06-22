@@ -23,7 +23,8 @@ file sealed class WorkspaceDoc
     public DateTime CreatedAtUtc { get; set; }
     public DateTime? ProvisionedAtUtc { get; set; }
     public List<WorkspaceUserDoc> Users { get; set; } = new();
-    public List<WorkspaceAppDoc> Applications { get; set; } = new();
+    /// <summary>IDs of catalog applications assigned to this workspace.</summary>
+    public List<string> ApplicationIds { get; set; } = new();
     // Denormalized for efficient cross-partition ListForUser queries.
     public List<string> MemberUserIds { get; set; } = new();
 }
@@ -38,15 +39,14 @@ file sealed class WorkspaceUserDoc
     public DateTime JoinedAtUtc { get; set; }
 }
 
-file sealed class WorkspaceAppDoc
+file sealed class ApplicationDoc
 {
     public string Id { get; set; } = default!;
-    public string WorkspaceId { get; set; } = default!;
     public string Name { get; set; } = default!;
     public string Type { get; set; } = default!;
     public string ContainerImage { get; set; } = default!;
     public int ContainerPort { get; set; }
-    public string CpuRequest { get; set; } = "500m";
+    public string CpuRequest { get; set; } = "100m";
     public string CpuLimit { get; set; } = "2";
     public string MemoryRequest { get; set; } = "1Gi";
     public string MemoryLimit { get; set; } = "4Gi";
@@ -54,6 +54,7 @@ file sealed class WorkspaceAppDoc
     public string EnvironmentJson { get; set; } = "{}";
     public string? CommandJson { get; set; }
     public bool Enabled { get; set; } = true;
+    public DateTime CreatedAtUtc { get; set; }
 }
 
 file sealed class SessionDoc
@@ -99,7 +100,7 @@ file static class WorkspaceMapping
         CreatedAtUtc       = w.CreatedAtUtc,
         ProvisionedAtUtc   = w.ProvisionedAtUtc,
         Users              = w.Users.Select(u => u.ToDoc()).ToList(),
-        Applications       = w.Applications.Select(a => a.ToDoc()).ToList(),
+        ApplicationIds     = w.ApplicationIds.Select(id => id.ToString()).ToList(),
         MemberUserIds      = w.Users.Select(u => u.UserId).ToList()
     };
 
@@ -116,7 +117,7 @@ file static class WorkspaceMapping
             createdAtUtc:       d.CreatedAtUtc,
             provisionedAtUtc:   d.ProvisionedAtUtc,
             users:              d.Users.Select(u => u.ToDomain()).ToList(),
-            applications:       d.Applications.Select(a => a.ToDomain()).ToList(),
+            applicationIds:     d.ApplicationIds.Select(Guid.Parse).ToList(),
             quotaInGiB:         d.QuotaInGiB);
 
     internal static WorkspaceUserDoc ToDoc(this WorkspaceUser u) => new()
@@ -139,41 +140,6 @@ file static class WorkspaceMapping
         JoinedAtUtc = d.JoinedAtUtc
     };
 
-    internal static WorkspaceAppDoc ToDoc(this WorkspaceApplication a) => new()
-    {
-        Id              = a.Id.ToString(),
-        WorkspaceId     = a.WorkspaceId.ToString(),
-        Name            = a.Name,
-        Type            = a.Type.ToString(),
-        ContainerImage  = a.ContainerImage,
-        ContainerPort   = a.ContainerPort,
-        CpuRequest      = a.CpuRequest,
-        CpuLimit        = a.CpuLimit,
-        MemoryRequest   = a.MemoryRequest,
-        MemoryLimit     = a.MemoryLimit,
-        MountPath       = a.MountPath,
-        EnvironmentJson = a.EnvironmentJson,
-        CommandJson     = a.CommandJson,
-        Enabled         = a.Enabled
-    };
-
-    internal static WorkspaceApplication ToDomain(this WorkspaceAppDoc d) => new()
-    {
-        Id              = Guid.Parse(d.Id),
-        WorkspaceId     = Guid.Parse(d.WorkspaceId),
-        Name            = d.Name,
-        Type            = Enum.Parse<ApplicationType>(d.Type),
-        ContainerImage  = d.ContainerImage,
-        ContainerPort   = d.ContainerPort,
-        CpuRequest      = d.CpuRequest,
-        CpuLimit        = d.CpuLimit,
-        MemoryRequest   = d.MemoryRequest,
-        MemoryLimit     = d.MemoryLimit,
-        MountPath       = d.MountPath,
-        EnvironmentJson = d.EnvironmentJson,
-        CommandJson     = d.CommandJson,
-        Enabled         = d.Enabled
-    };
 }
 
 file static class SessionMapping
@@ -275,36 +241,24 @@ public class WorkspaceRepository : IWorkspaceRepository
             new PartitionKey(doc.Id), cancellationToken: ct);
     }
 
-    public async Task<List<WorkspaceApplication>> GetApplicationsAsync(Guid workspaceId, CancellationToken ct = default)
+    public async Task AssignApplicationAsync(Guid workspaceId, Guid appId, CancellationToken ct = default)
     {
-        try
-        {
-            var r = await _provider.Workspaces.ReadItemAsync<WorkspaceDoc>(
-                workspaceId.ToString(), new PartitionKey(workspaceId.ToString()), cancellationToken: ct);
-            return r.Resource.Applications.Where(a => a.Enabled).Select(a => a.ToDomain()).ToList();
-        }
-        catch (CosmosException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
-        {
-            return new();
-        }
+        var r  = await _provider.Workspaces.ReadItemAsync<WorkspaceDoc>(
+            workspaceId.ToString(), new PartitionKey(workspaceId.ToString()), cancellationToken: ct);
+        var doc = r.Resource;
+        var idStr = appId.ToString();
+        if (!doc.ApplicationIds.Contains(idStr))
+            doc.ApplicationIds.Add(idStr);
+        await _provider.Workspaces.UpsertItemAsync(doc, new PartitionKey(doc.Id), cancellationToken: ct);
     }
 
-    public async Task<WorkspaceApplication?> GetApplicationAsync(Guid applicationId, CancellationToken ct = default)
+    public async Task UnassignApplicationAsync(Guid workspaceId, Guid appId, CancellationToken ct = default)
     {
-        // Intra-document JOIN to find an application embedded in any workspace doc.
-        // SQL uses camelCase field names because of CosmosPropertyNamingPolicy.CamelCase.
-        var query = new QueryDefinition(
-            "SELECT VALUE a FROM c JOIN a IN c.applications WHERE a.id = @appId")
-            .WithParameter("@appId", applicationId.ToString());
-
-        using var iter = _provider.Workspaces.GetItemQueryIterator<WorkspaceAppDoc>(query);
-        while (iter.HasMoreResults)
-        {
-            var page = await iter.ReadNextAsync(ct);
-            var doc = page.FirstOrDefault();
-            if (doc is not null) return doc.ToDomain();
-        }
-        return null;
+        var r   = await _provider.Workspaces.ReadItemAsync<WorkspaceDoc>(
+            workspaceId.ToString(), new PartitionKey(workspaceId.ToString()), cancellationToken: ct);
+        var doc = r.Resource;
+        doc.ApplicationIds.Remove(appId.ToString());
+        await _provider.Workspaces.UpsertItemAsync(doc, new PartitionKey(doc.Id), cancellationToken: ct);
     }
 }
 
@@ -424,6 +378,113 @@ public class SessionRepository : ISessionRepository
             sessionId.ToString(),
             new PartitionKey(workspaceId.ToString()),
             new[] { PatchOperation.Set("/lastActivityUtc", DateTime.UtcNow) },
+            cancellationToken: ct);
+    }
+}
+
+// ── ApplicationRepository ──────────────────────────────────────────────────────
+
+file static class ApplicationMapping
+{
+    internal static ApplicationDoc ToDoc(this WorkspaceApplication a) => new()
+    {
+        Id              = a.Id.ToString(),
+        Name            = a.Name,
+        Type            = a.Type.ToString(),
+        ContainerImage  = a.ContainerImage,
+        ContainerPort   = a.ContainerPort,
+        CpuRequest      = a.CpuRequest,
+        CpuLimit        = a.CpuLimit,
+        MemoryRequest   = a.MemoryRequest,
+        MemoryLimit     = a.MemoryLimit,
+        MountPath       = a.MountPath,
+        EnvironmentJson = a.EnvironmentJson,
+        CommandJson     = a.CommandJson,
+        Enabled         = a.Enabled,
+        CreatedAtUtc    = a.CreatedAtUtc
+    };
+
+    internal static WorkspaceApplication ToDomain(this ApplicationDoc d) => new()
+    {
+        Id              = Guid.Parse(d.Id),
+        Name            = d.Name,
+        Type            = Enum.Parse<ApplicationType>(d.Type),
+        ContainerImage  = d.ContainerImage,
+        ContainerPort   = d.ContainerPort,
+        CpuRequest      = d.CpuRequest,
+        CpuLimit        = d.CpuLimit,
+        MemoryRequest   = d.MemoryRequest,
+        MemoryLimit     = d.MemoryLimit,
+        MountPath       = d.MountPath,
+        EnvironmentJson = d.EnvironmentJson,
+        CommandJson     = d.CommandJson,
+        Enabled         = d.Enabled,
+        CreatedAtUtc    = d.CreatedAtUtc
+    };
+}
+
+public class ApplicationRepository : IApplicationRepository
+{
+    private readonly CosmosContainerProvider _provider;
+    public ApplicationRepository(CosmosContainerProvider provider) => _provider = provider;
+
+    public async Task<WorkspaceApplication?> GetByIdAsync(Guid id, CancellationToken ct = default)
+    {
+        try
+        {
+            var r = await _provider.Applications.ReadItemAsync<ApplicationDoc>(
+                id.ToString(), new PartitionKey(id.ToString()), cancellationToken: ct);
+            return r.Resource.ToDomain();
+        }
+        catch (CosmosException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            return null;
+        }
+    }
+
+    public async Task<List<WorkspaceApplication>> ListAsync(bool includeDisabled = false, CancellationToken ct = default)
+    {
+        var sql = includeDisabled
+            ? "SELECT * FROM c ORDER BY c.createdAtUtc DESC"
+            : "SELECT * FROM c WHERE c.enabled = true ORDER BY c.createdAtUtc DESC";
+        var query = new QueryDefinition(sql);
+
+        var results = new List<WorkspaceApplication>();
+        using var iter = _provider.Applications.GetItemQueryIterator<ApplicationDoc>(query);
+        while (iter.HasMoreResults)
+            results.AddRange((await iter.ReadNextAsync(ct)).Select(d => d.ToDomain()));
+        return results;
+    }
+
+    public async Task<List<WorkspaceApplication>> GetByIdsAsync(IEnumerable<Guid> ids, CancellationToken ct = default)
+    {
+        var idList = ids.ToList();
+        if (idList.Count == 0) return new();
+
+        // ReadManyItemsAsync does parallel point-reads in a single round-trip.
+        var keys = idList.Select(id => (id.ToString(), new PartitionKey(id.ToString()))).ToList();
+        var response = await _provider.Applications.ReadManyItemsAsync<ApplicationDoc>(keys, cancellationToken: ct);
+        return response.Select(d => d.ToDomain()).ToList();
+    }
+
+    public async Task AddAsync(WorkspaceApplication application, CancellationToken ct = default)
+    {
+        var doc = application.ToDoc();
+        await _provider.Applications.CreateItemAsync(doc, new PartitionKey(doc.Id), cancellationToken: ct);
+    }
+
+    public async Task UpdateAsync(WorkspaceApplication application, CancellationToken ct = default)
+    {
+        var doc = application.ToDoc();
+        await _provider.Applications.UpsertItemAsync(doc, new PartitionKey(doc.Id), cancellationToken: ct);
+    }
+
+    public async Task DisableAsync(Guid id, CancellationToken ct = default)
+    {
+        await _provider.Applications.PatchItemAsync<ApplicationDoc>(
+            id.ToString(),
+            new PartitionKey(id.ToString()),
+            new[] { PatchOperation.Set("/enabled", false) },
             cancellationToken: ct);
     }
 }

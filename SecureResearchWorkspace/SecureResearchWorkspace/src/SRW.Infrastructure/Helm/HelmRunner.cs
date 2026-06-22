@@ -33,7 +33,7 @@ public sealed class HelmRunner
         await File.WriteAllTextAsync(valuesFile, valuesJson, ct);
         try
         {
-            var args = $"upgrade --install {releaseName} {_opts.SessionChartPath} -n {k8sNamespace} -f \"{valuesFile}\" --atomic=false --timeout 5m";
+            var args = $"upgrade --install {releaseName} {_opts.SessionChartPath} -n {k8sNamespace} -f \"{valuesFile}\" --timeout 5m";
             await ExecAsync(args, ct);
         }
         finally
@@ -92,6 +92,9 @@ public sealed class HelmRunner
 
         var stdout = await stdoutTask;
         var stderr = await stderrTask;
+
+        if (!string.IsNullOrWhiteSpace(stderr))
+            _log.LogDebug("helm stderr: {Stderr}", stderr);
 
         if (process.ExitCode != 0)
         {

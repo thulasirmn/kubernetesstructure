@@ -24,6 +24,7 @@ builder.Services.AddDataProtection();
 
 builder.Services.AddScoped<IWorkspaceRepository, WorkspaceRepository>();
 builder.Services.AddScoped<ISessionRepository, SessionRepository>();
+builder.Services.AddScoped<IApplicationRepository, ApplicationRepository>();
 builder.Services.AddScoped<IWorkspaceSecretStore, WorkspaceSecretStore>();
 
 // ── Infrastructure adapters ───────────────────────────────────────────────────

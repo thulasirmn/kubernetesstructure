@@ -94,13 +94,11 @@ public record WorkspaceResponse(
     string K8sNamespace,
     DateTime CreatedAtUtc,
     int UserCount,
-    IEnumerable<ApplicationSummary> Applications)
+    IEnumerable<Guid> ApplicationIds)
 {
     public static WorkspaceResponse From(Workspace w) => new(
         w.Id, w.Name, w.Status.ToString(),
         w.StorageAccountName, w.FileShareName, w.K8sNamespace,
         w.CreatedAtUtc, w.Users.Count,
-        w.Applications.Select(a => new ApplicationSummary(a.Id, a.Name, a.Type.ToString(), a.Enabled)));
+        w.ApplicationIds);
 }
-
-public record ApplicationSummary(Guid Id, string Name, string Type, bool Enabled);

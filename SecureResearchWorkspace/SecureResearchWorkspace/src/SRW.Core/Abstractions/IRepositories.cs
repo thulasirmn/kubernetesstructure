@@ -13,8 +13,22 @@ public interface IWorkspaceRepository
     Task<List<Workspace>> ListByStatusAsync(WorkspaceStatus status, CancellationToken ct = default);
     Task AddAsync(Workspace workspace, CancellationToken ct = default);
     Task UpdateAsync(Workspace workspace, CancellationToken ct = default);
-    Task<List<WorkspaceApplication>> GetApplicationsAsync(Guid workspaceId, CancellationToken ct = default);
-    Task<WorkspaceApplication?> GetApplicationAsync(Guid applicationId, CancellationToken ct = default);
+    Task AssignApplicationAsync(Guid workspaceId, Guid appId, CancellationToken ct = default);
+    Task UnassignApplicationAsync(Guid workspaceId, Guid appId, CancellationToken ct = default);
+}
+
+/// <summary>
+/// CRUD for the global application catalog (Cosmos "applications" container, partition key /id).
+/// Applications are not workspace-scoped here; workspaces hold a list of assigned app IDs.
+/// </summary>
+public interface IApplicationRepository
+{
+    Task<WorkspaceApplication?> GetByIdAsync(Guid id, CancellationToken ct = default);
+    Task<List<WorkspaceApplication>> ListAsync(bool includeDisabled = false, CancellationToken ct = default);
+    Task<List<WorkspaceApplication>> GetByIdsAsync(IEnumerable<Guid> ids, CancellationToken ct = default);
+    Task AddAsync(WorkspaceApplication application, CancellationToken ct = default);
+    Task UpdateAsync(WorkspaceApplication application, CancellationToken ct = default);
+    Task DisableAsync(Guid id, CancellationToken ct = default);
 }
 
 public interface ISessionRepository

@@ -29,7 +29,9 @@ public class Workspace
 
     // Navigation
     public List<WorkspaceUser> Users { get; private set; } = new();
-    public List<WorkspaceApplication> Applications { get; private set; } = new();
+
+    /// <summary>IDs of catalog applications assigned to this workspace.</summary>
+    public List<Guid> ApplicationIds { get; private set; } = new();
 
     private Workspace() { }
 
@@ -72,7 +74,7 @@ public class Workspace
         Guid id, string name, string description, WorkspaceStatus status,
         string resourceGroup, string storageAccountName, string fileShareName,
         string k8sNamespace, DateTime createdAtUtc, DateTime? provisionedAtUtc,
-        List<WorkspaceUser> users, List<WorkspaceApplication> applications,
+        List<WorkspaceUser> users, List<Guid> applicationIds,
         long quotaInGiB = 100) =>
         new()
         {
@@ -87,7 +89,7 @@ public class Workspace
             CreatedAtUtc = createdAtUtc,
             ProvisionedAtUtc = provisionedAtUtc,
             Users = users,
-            Applications = applications,
+            ApplicationIds = applicationIds,
             QuotaInGiB = quotaInGiB
         };
 
@@ -106,6 +108,14 @@ public class Workspace
             JoinedAtUtc = DateTime.UtcNow
         });
     }
+
+    public void AssignApplication(Guid appId)
+    {
+        if (!ApplicationIds.Contains(appId))
+            ApplicationIds.Add(appId);
+    }
+
+    public void UnassignApplication(Guid appId) => ApplicationIds.Remove(appId);
 }
 
 public enum WorkspaceStatus { Pending, Provisioning, Active, Failed, Deleting }
